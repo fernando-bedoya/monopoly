@@ -4,3 +4,6 @@
 - [LinkedIn](https://www.linkedin.com/in/david-fernando-bedoya-ramirez-261b86352)  
 - [GitHub](https://github.com/fernando-bedoya) 
 
+**Luz Alejandra López Cuayal**
+- [GitHub](https://github.com/Cherrysoospace) 
+
