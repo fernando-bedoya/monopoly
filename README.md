@@ -7,3 +7,5 @@
 **Luz Alejandra López Cuayal**
 - [GitHub](https://github.com/Cherrysoospace) 
 
+**Cristhian Andrey Zambrano Ceron**
+- [GitHub](https://github.com/CristhianZambranoC) 
