@@ -1,0 +1,162 @@
+/* Contenedor del tablero y banner */
+.contenedor-banner-tablero {
+    position: relative;
+    width: 800px;
+    height: 800px;
+    margin: 20px auto;
+}
+
+/* Banner como fondo del tablero */
+.banner-fondo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 800px;
+    object-fit: cover;
+    z-index: 1;
+    border-radius: 16px;
+}
+
+/* Tablero principal */
+.tablero-monopoly {
+    width: 800px;
+    height: 800px;
+    border: 3px solid black;
+    margin: 20px auto;
+    position: relative;
+    z-index: 2;
+    background: white;
+}
+
+/* Filas del tablero */
+.fila-superior-tablero, .fila-inferior-tablero {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    display: flex;
+}
+.fila-superior-tablero { top: 0; }
+.fila-inferior-tablero { bottom: 0; }
+
+/* Columnas del tablero */
+.columna-izquierda-tablero, .columna-derecha-tablero {
+    position: absolute;
+    top: 80px;
+    width: 80px;
+    height: 640px;
+    display: flex;
+    flex-direction: column;
+}
+.columna-izquierda-tablero { left: 0; }
+.columna-derecha-tablero { right: 0; }
+
+/* Centro del tablero */
+.centro-tablero {
+    position: absolute;
+    top: 80px;
+    left: 80px;
+    width: 640px;
+    height: 640px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.contenido-centro-tablero {
+    text-align: center;
+}
+.titulo-centro-tablero {
+    font-size: 40px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+.subtitulo-centro-tablero {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.area-centro-tablero {
+    width: 200px;
+    height: 200px;
+    border: 2px solid black;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Casillas horizontales */
+.casilla-horizontal {
+    width: 60px;
+    height: 80px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    text-align: center;
+}
+
+/* Casillas verticales */
+.casilla-vertical {
+    width: 80px;
+    height: 60px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    text-align: center;
+}
+
+/* Casillas de esquina */
+.casilla-esquina {
+    width: 80px;
+    height: 80px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
+.parqueo-gratis {}
+.casilla-ve-carcel {}
+.casilla-carcel {}
+.casilla-salida {}
+.casilla-suerte {}
+.casilla-fondo-comunitario {}
+.casilla-hidroelectrica {}
+.casilla-impuesto-cafetero {}
+.empresa-cafe {}
+.terminal-manizales {}
+.terminal-la-dorada {}
+.terminal-riosucio {}
+.terminal-chinchina {}
+.municipio-marulanda {}
+.municipio-manzanares {}
+.municipio-filadelfia {}
+.municipio-supia {}
+.municipio-marmato {}
+.municipio-neira {}
+.municipio-palestina {}
+.municipio-villamaria {}
+.municipio-anserma {}
+.municipio-san-jose {}
+.municipio-riosucio {}
+.municipio-norcasia {}
+.municipio-victoria {}
+.municipio-la-dorada {}
+.municipio-salamina {}
+.municipio-pacora {}
+.municipio-chinchina {}
+.municipio-manizales {}
+.municipio-pensilvania {}
+.municipio-aguadas {}
+.municipio-viterbo {}
+/* ...agrega estilos personalizados si lo deseas... */
