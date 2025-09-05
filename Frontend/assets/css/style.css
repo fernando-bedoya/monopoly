@@ -160,3 +160,13 @@
 .municipio-aguadas {}
 .municipio-viterbo {}
 /* ...agrega estilos personalizados si lo deseas... */
+
+.background-main {
+  height: 88svh;
+  background-image: url('../assets/images/background.jpg');
+  /* background-size: contain; */
+  /* background-position: center; */
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
