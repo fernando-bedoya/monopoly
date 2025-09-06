@@ -267,18 +267,6 @@ body, .contenedor-banner-tablero, .tablero-monopoly, nav {
 .municipio-aguadas {}
 .municipio-viterbo {}
 /* ...agrega estilos personalizados si lo deseas... */
-<<<<<<< Updated upstream
-
-.background-main {
-  height: 88svh;
-  background-image: url('./Frontend/assets/img/banner.png');
-  /* background-size: contain; */
-  /* background-position: center; */
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-=======
 /* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
 .parqueo-gratis {}
 .casilla-ve-carcel {}
@@ -315,4 +303,3 @@ body, .contenedor-banner-tablero, .tablero-monopoly, nav {
 .municipio-aguadas {}
 .municipio-viterbo {}
 /* ...agrega estilos personalizados si lo deseas... */
->>>>>>> Stashed changes
