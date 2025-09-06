@@ -1,9 +1,31 @@
+/* Paleta de cultura cafetera */
+:root {
+    --cafe-oscuro: #6f4e37;
+    --cafe-claro: #c8b08b;
+    --beige: #f5ecd7;
+    --verde-cafe: #4e6e58;
+    --dorado: #bfa14a;
+}
+
 /* Contenedor del tablero y banner */
 .contenedor-banner-tablero {
     position: relative;
     width: 800px;
     height: 800px;
     margin: 20px auto;
+}
+
+/* Banner como fondo principal de la página */
+.banner-fondo-principal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0.85;
+    pointer-events: none;
 }
 
 /* Banner como fondo del tablero */
@@ -18,6 +40,12 @@
     border-radius: 16px;
 }
 
+/* El resto del contenido debe estar encima */
+body, .contenedor-banner-tablero, .tablero-monopoly, nav {
+    position: relative;
+    z-index: 2;
+}
+
 /* Tablero principal */
 .tablero-monopoly {
     width: 800px;
@@ -26,7 +54,70 @@
     margin: 20px auto;
     position: relative;
     z-index: 2;
-    background: white;
+    background: rgba(245,236,215,0.85); /* beige semitransparente */
+    border: 3px solid var(--cafe-oscuro);
+    border-radius: 18px;
+    box-shadow: 0 4px 16px rgba(111, 78, 55, 0.12);
+    transition: box-shadow 0.2s;
+}
+
+/* Fondo semitransparente para el centro del tablero */
+.centro-tablero {
+    position: absolute;
+    top: 80px;
+    left: 80px;
+    width: 640px;
+    height: 640px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(200,176,139,0.25); /* café claro semitransparente */
+    border-radius: 14px;
+    border: 2px solid var(--dorado);
+    box-shadow: none;
+}
+
+/* Contenido del centro del tablero */
+.contenido-centro-tablero {
+    text-align: center;
+}
+
+/* Títulos del centro */
+.titulo-centro-tablero {
+    font-size: 40px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: var(--verde-cafe);
+    text-shadow: none;
+}
+
+/* Subtítulos del centro */
+.subtitulo-centro-tablero {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--cafe-oscuro);
+    text-shadow: none;
+}
+
+/* Área central */
+.area-centro-tablero {
+    width: 200px;
+    height: 200px;
+    border: 2px solid black;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    text-align: center;
+    border-radius: 12px;
+    background: var(--beige);
+    color: var(--cafe-oscuro);
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: none;
+    border: 2px solid var(--dorado);
 }
 
 /* Filas del tablero */
@@ -52,42 +143,6 @@
 .columna-izquierda-tablero { left: 0; }
 .columna-derecha-tablero { right: 0; }
 
-/* Centro del tablero */
-.centro-tablero {
-    position: absolute;
-    top: 80px;
-    left: 80px;
-    width: 640px;
-    height: 640px;
-    border: 2px solid black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.contenido-centro-tablero {
-    text-align: center;
-}
-.titulo-centro-tablero {
-    font-size: 40px;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-.subtitulo-centro-tablero {
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-.area-centro-tablero {
-    width: 200px;
-    height: 200px;
-    border: 2px solid black;
-    margin: 20px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    text-align: center;
-}
-
 /* Casillas horizontales */
 .casilla-horizontal {
     width: 60px;
@@ -98,6 +153,20 @@
     justify-content: center;
     font-size: 8px;
     text-align: center;
+    background: var(--cafe-claro);
+    border-radius: 8px;
+    border: 2px solid var(--cafe-oscuro);
+    color: var(--cafe-oscuro);
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: none;
+    transition: background 0.2s, color 0.2s;
+    box-shadow: none;
+}
+.casilla-horizontal:hover {
+    background: var(--dorado);
+    color: var(--beige);
 }
 
 /* Casillas verticales */
@@ -110,6 +179,20 @@
     justify-content: center;
     font-size: 8px;
     text-align: center;
+    background: var(--beige);
+    border-radius: 8px;
+    border: 2px solid var(--verde-cafe);
+    color: var(--verde-cafe);
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: none;
+    transition: background 0.2s, color 0.2s;
+    box-shadow: none;
+}
+.casilla-vertical:hover {
+    background: var(--verde-cafe);
+    color: var(--beige);
 }
 
 /* Casillas de esquina */
@@ -122,6 +205,30 @@
     justify-content: center;
     font-size: 10px;
     text-align: center;
+    background: var(--cafe-oscuro);
+    border-radius: 10px;
+    border: 2px solid var(--dorado);
+    color: var(--beige);
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: none;
+    transition: background 0.2s, color 0.2s;
+    box-shadow: none;
+}
+.casilla-esquina:hover {
+    background: var(--dorado);
+    color: var(--cafe-oscuro);
+}
+
+/* Animación sutil al tablero */
+@keyframes resplandorTablero {
+    0% { box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);}
+    50% { box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.55);}
+    100% { box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);}
+}
+.tablero-monopoly {
+    animation: resplandorTablero 4s infinite;
 }
 
 /* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
@@ -160,6 +267,7 @@
 .municipio-aguadas {}
 .municipio-viterbo {}
 /* ...agrega estilos personalizados si lo deseas... */
+<<<<<<< Updated upstream
 
 .background-main {
   height: 88svh;
@@ -170,3 +278,41 @@
   background-size: cover;
 }
 
+=======
+/* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
+.parqueo-gratis {}
+.casilla-ve-carcel {}
+.casilla-carcel {}
+.casilla-salida {}
+.casilla-suerte {}
+.casilla-fondo-comunitario {}
+.casilla-hidroelectrica {}
+.casilla-impuesto-cafetero {}
+.empresa-cafe {}
+.terminal-manizales {}
+.terminal-la-dorada {}
+.terminal-riosucio {}
+.terminal-chinchina {}
+.municipio-marulanda {}
+.municipio-manzanares {}
+.municipio-filadelfia {}
+.municipio-supia {}
+.municipio-marmato {}
+.municipio-neira {}
+.municipio-palestina {}
+.municipio-villamaria {}
+.municipio-anserma {}
+.municipio-san-jose {}
+.municipio-riosucio {}
+.municipio-norcasia {}
+.municipio-victoria {}
+.municipio-la-dorada {}
+.municipio-salamina {}
+.municipio-pacora {}
+.municipio-chinchina {}
+.municipio-manizales {}
+.municipio-pensilvania {}
+.municipio-aguadas {}
+.municipio-viterbo {}
+/* ...agrega estilos personalizados si lo deseas... */
+>>>>>>> Stashed changes
