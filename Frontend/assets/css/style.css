@@ -320,75 +320,172 @@ body, .contenedor-banner-tablero, .tablero-monopoly, nav {
     animation: resplandorTablero 4s infinite;
 }
 
+/* Asegurar que cada casilla sea relativa */
+.casilla-horizontal,
+.casilla-vertical {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Franja de color en la parte superior */
+.color-franja {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  border-bottom: 1px solid black;
+}
+
+  /* Colores oficiales tipo Monopoly */
+  .grupo-marron   { background: #8B4513; }
+  .grupo-celeste  { background: #ADD8E6; }
+  .grupo-rosado   { background: #FF69B4; }
+  .grupo-naranja  { background: #FFA500; }
+  .grupo-rojo     { background: #FF0000; }
+  .grupo-amarillo { background: #FFFF00; }
+  .grupo-verde    { background: #008000; }
+  .grupo-azul     { background: #0000FF; }
+  
+  
+
 /* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
 .parqueo-gratis {}
+
 .casilla-ve-carcel {}
+
 .casilla-carcel {}
+
 .casilla-salida {}
+
 .casilla-suerte {}
+
 .casilla-fondo-comunitario {}
+
 .casilla-hidroelectrica {}
+
 .casilla-impuesto-cafetero {}
+
 .empresa-cafe {}
+
 .terminal-manizales {}
+
 .terminal-la-dorada {}
+
 .terminal-riosucio {}
+
 .terminal-chinchina {}
+
 .municipio-marulanda {}
+
 .municipio-manzanares {}
+
 .municipio-filadelfia {}
+
 .municipio-supia {}
+
 .municipio-marmato {}
+
 .municipio-neira {}
+
 .municipio-palestina {}
+
 .municipio-villamaria {}
+
 .municipio-anserma {}
+
 .municipio-san-jose {}
+
 .municipio-riosucio {}
+
 .municipio-norcasia {}
+
 .municipio-victoria {}
+
 .municipio-la-dorada {}
+
 .municipio-salamina {}
+
 .municipio-pacora {}
+
 .municipio-chinchina {}
+
 .municipio-manizales {}
+
 .municipio-pensilvania {}
+
 .municipio-aguadas {}
+
 .municipio-viterbo {}
+
 /* ...agrega estilos personalizados si lo deseas... */
 /* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
 .parqueo-gratis {}
+
 .casilla-ve-carcel {}
+
 .casilla-carcel {}
+
 .casilla-salida {}
+
 .casilla-suerte {}
+
 .casilla-fondo-comunitario {}
+
 .casilla-hidroelectrica {}
+
 .casilla-impuesto-cafetero {}
+
 .empresa-cafe {}
+
 .terminal-manizales {}
+
 .terminal-la-dorada {}
+
 .terminal-riosucio {}
+
 .terminal-chinchina {}
+
 .municipio-marulanda {}
+
 .municipio-manzanares {}
+
 .municipio-filadelfia {}
+
 .municipio-supia {}
+
 .municipio-marmato {}
+
 .municipio-neira {}
+
 .municipio-palestina {}
+
 .municipio-villamaria {}
+
 .municipio-anserma {}
+
 .municipio-san-jose {}
+
 .municipio-riosucio {}
+
 .municipio-norcasia {}
+
 .municipio-victoria {}
+
 .municipio-la-dorada {}
+
 .municipio-salamina {}
+
 .municipio-pacora {}
+
 .municipio-chinchina {}
+
 .municipio-manizales {}
+
 .municipio-pensilvania {}
+
 .municipio-aguadas {}
+
 .municipio-viterbo {}
+
 /* ...agrega estilos personalizados si lo deseas... */
