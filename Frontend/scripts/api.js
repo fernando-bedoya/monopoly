@@ -8,7 +8,7 @@ export async function getBoard() {
   return fetch(`${API_URL}/board`).then(res => res.json());
 }
 
-import { getRanking } from './api.mjs';
+import { getRanking } from './api.js';
 
 document.addEventListener("DOMContentLoaded", function () {
     let btnCargar = document.getElementById("cargarRanking");
