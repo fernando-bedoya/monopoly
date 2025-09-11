@@ -1,201 +1,206 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="assets/css/minty.css">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monopoly</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="assets/css/minty.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+    crossorigin="anonymous"></script>
 </head>
+
 <body>
   <!-- Banner como fondo principal -->
   <img src="assets/img/banner2.png" class="banner-fondo-principal" alt="Banner Monopoly">
 
-<nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">Monopoly</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+  <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Monopoly</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+        aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-    <div class="collapse navbar-collapse" id="navbarColor01">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link active" href="#">Inicio
-            <span class="visually-hidden">(current)</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Nuevo Juego</a>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
-            Jugadores
-          </a>
-          <div class="dropdown-menu">
-            <a class="dropdown-item" href="#">Ranking</a>
-            <a class="dropdown-item" href="#">Another action</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#">Something else here</a>
-          </div>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-        </li>
-      </ul>
+      <div class="collapse navbar-collapse" id="navbarColor01">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#">Inicio
+              <span class="visually-hidden">(current)</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Nuevo Juego</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true"
+              aria-expanded="false">
+              Jugadores
+            </a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="#">Ranking</a>
+              <a class="dropdown-item" href="#">Another action</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#">Something else here</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
+          </li>
+        </ul>
 
-      <form class="d-flex">
-        <input class="form-control me-sm-2" type="search" placeholder="Buscar jugadores">
-        <button class="btn btn-secondary my-2 my-sm-0" type="submit">Buscar</button>
-      </form>
+        <form class="d-flex">
+          <input class="form-control me-sm-2" type="search" placeholder="Buscar jugadores">
+          <button class="btn btn-secondary my-2 my-sm-0" type="submit">Buscar</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- Contenedor para banner y tablero -->
+  <div class="contenedor-banner-tablero">
+    <div class="tablero-monopoly">
+      <!-- FILA SUPERIOR (de izquierda a derecha) -->
+      <div class="fila-superior-tablero">
+        <div class="casilla-esquina parqueo-gratis">PARQUEO<br>GRATIS</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-rojo"></div>
+          AVENIDA KENTUCKY
+        </div>
+        <div class="casilla-horizontal casilla-suerte">SORPRESA</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-rojo"></div>
+          AVENIDA INDIANA
+        </div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-rojo"></div>
+          AVENIDA ILLINOIS
+        </div>
+        <div class="casilla-horizontal">FERROCARRIL<br>B&amp;O</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-amarillo"></div>
+          AVENIDA ATLÁNTICO
+        </div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-amarillo"></div>
+          AVENIDA VENTNOR
+        </div>
+        <div class="casilla-horizontal">COMPAÑÍA<br>DE AGUA</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-amarillo"></div>
+          JARDINES MARVIN
+        </div>
+        <div class="casilla-esquina casilla-ve-carcel">VE A<br>LA CÁRCEL</div>
+      </div>
+
+
+
+      <!-- COLUMNA IZQUIERDA (de abajo hacia arriba) -->
+      <div class="columna-izquierda-tablero">
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-naranja"></div>
+          AVENIDA NUEVA YORK
+        </div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-naranja"></div>
+          AVENIDA TENNESSEE
+        </div>
+        <div class="casilla-vertical casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-naranja"></div>
+          PLAZA ST. JAMES
+        </div>
+        <div class="casilla-vertical">FERROCARRIL<br>PENNSYLVANIA</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-rosado"></div>
+          AVENIDA VIRGINIA
+        </div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-rosado"></div>
+          AVENIDA STATES
+        </div>
+        <div class="casilla-vertical">COMPAÑÍA<br>DE ELECTRICIDAD</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-rosado"></div>
+          PLAZA ST. CHARLES
+        </div>
+      </div>
+
+      <!-- FILA INFERIOR (de derecha a izquierda) --> (de derecha a izquierda) -->
+      <div class="fila-inferior-tablero">
+        <div class="casilla-esquina casilla-carcel">CÁRCEL<br>/solo de visita<span style="font-size:12px"></span></div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-celeste"></div>
+          AVENIDA CONNECTICUT
+        </div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-celeste"></div>
+          AVENIDA VERMONT
+        </div>
+        <div class="casilla-horizontal casilla-suerte">SORPRESA</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-celeste"></div>
+          AVENIDA ORIENTAL
+        </div>
+        <div class="casilla-horizontal">FERROCARRIL<br>READING</div>
+        <div class="casilla-horizontal">IMPUESTO<br>SOBRE INGRESOS</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-marron"></div>
+          AVENIDA BÁLTICA
+        </div>
+        <div class="casilla-horizontal casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
+        <div class="casilla-horizontal">
+          <div class="color-franja grupo-marron"></div>
+          AVENIDA MEDITERRÁNEO
+        </div>
+        <div class="casilla-esquina casilla-salida">SALIDA</div>
+      </div>
+
+      <!-- COLUMNA DERECHA (de arriba hacia abajo) -->
+      <div class="columna-derecha-tablero">
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-verde"></div>
+          AVENIDA PACÍFICO
+        </div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-verde"></div>
+          AVENIDA CAROLINA DEL NORTE
+        </div>
+        <div class="casilla-vertical casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-verde"></div>
+          AVENIDA PENSILVANIA
+        </div>
+        <div class="casilla-vertical">FERROCARRIL<br>SHORT LINE</div>
+        <div class="casilla-vertical casilla-suerte">SORPRESA</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-azul"></div>
+          AVENIDA PARQUE
+        </div>
+        <div class="casilla-vertical">IMPUESTO<br>DE LUJO</div>
+        <div class="casilla-vertical">
+          <div class="color-franja grupo-azul"></div>
+          PASEO DEL PARQUE
+        </div>
+      </div>
+
+      <!-- CENTRO -->
+      <div class="centro-tablero">
+        <div class="contenido-centro-tablero">
+          <div class="titulo-centro-tablero">MONOPOLY</div>
+          <div class="subtitulo-centro-tablero">Tablero clásico</div>
+          <div class="area-centro-tablero">ÁREA<br>DEL TABLERO</div>
+        </div>
+      </div>
     </div>
   </div>
-</nav>
 
 
-<!-- Contenedor para banner y tablero -->
-<div class="contenedor-banner-tablero">
-  <div class="tablero-monopoly">
-        <!-- FILA SUPERIOR -->
-        <div class="fila-superior-tablero">
-          <div class="casilla-esquina parqueo-gratis">PARQUEO<br>GRATIS</div>
-          <div class="casilla-horizontal municipio-marulanda">
-            <div class="color-franja grupo-marron"></div>
-            MARULANDA
-          </div>
-          <div class="casilla-horizontal casilla-suerte">SUERTE</div>
-          <div class="casilla-horizontal municipio-manzanares">
-            <div class="color-franja grupo-marron"></div>
-            MANZANARES
-          </div>
-          <div class="casilla-horizontal municipio-filadelfia">
-            <div class="color-franja grupo-marron"></div>
-            FILADELFIA
-          </div>
-          <div class="casilla-horizontal terminal-manizales">TERMINAL<br>MANIZALES</div>
-          <div class="casilla-horizontal municipio-supia">
-            <div class="color-franja grupo-celeste"></div>
-            SUPÍA
-          </div>
-          <div class="casilla-horizontal municipio-marmato">
-            <div class="color-franja grupo-celeste"></div>
-            MARMATO
-          </div>
-          <div class="casilla-horizontal empresa-cafe">EMPRESA<br>DE CAFÉ</div>
-          <div class="casilla-horizontal municipio-aranzazu">
-            <div class="color-franja grupo-celeste"></div>
-            ARANZAZU
-          </div>
-          <div class="casilla-esquina casilla-ve-carcel">VE A<br>LA CÁRCEL</div>
-      </div>
-      
-      
-        
-        <!-- COLUMNA IZQUIERDA -->
-        <div class="columna-izquierda-tablero">
-            <div class="casilla-vertical municipio-neira">
-              <div class="color-franja grupo-naranja"></div>
-              NEIRA
-            </div>
-            <div class="casilla-vertical municipio-palestina">
-              <div class="color-franja grupo-naranja"></div>
-              PALESTINA
-            </div>
-            <div class="casilla-vertical casilla-fondo-comunitario">FONDO<br>COMUNITARIO</div>
-            <div class="casilla-vertical municipio-villamaria">
-              <div class="color-franja grupo-naranja"></div>
-              VILLAMARÍA
-            </div>
-            <div class="casilla-vertical terminal-la-dorada">TERMINAL<br>LA DORADA</div>
-            <div class="casilla-vertical municipio-anserma">
-              <div class="color-franja grupo-rojo"></div>
-              ANSERMA
-            </div>
-            <div class="casilla-vertical municipio-san-jose">
-              <div class="color-franja grupo-rojo"></div>
-              SAN JOSÉ
-            </div>
-            <div class="casilla-vertical casilla-hidroelectrica">HIDROELÉCTRICA</div>
-            <div class="casilla-vertical municipio-riosucio">
-              <div class="color-franja grupo-rojo"></div>
-              RIOSUCIO
-            </div>
-        </div>
-
-        <!-- FILA INFERIOR -->
-        <div class="fila-inferior-tablero">
-            <div class="casilla-esquina casilla-carcel">CÁRCEL</div>
-            <div class="casilla-horizontal municipio-norcasia">
-              <div class="color-franja grupo-amarillo"></div>
-              NORCASIA
-            </div>
-            <div class="casilla-horizontal municipio-victoria">
-              <div class="color-franja grupo-amarillo"></div>
-              VICTORIA
-            </div>
-            <div class="casilla-horizontal casilla-suerte">SUERTE</div>
-            <div class="casilla-horizontal municipio-la-dorada">
-              <div class="color-franja grupo-amarillo"></div>
-              LA DORADA
-            </div>
-            <div class="casilla-horizontal terminal-riosucio">TERMINAL<br>RIOSUCIO</div>
-            <div class="casilla-horizontal municipio-salamina">
-              <div class="color-franja grupo-verde"></div>
-              SALAMINA
-            </div>
-            <div class="casilla-horizontal municipio-pacora">
-              <div class="color-franja grupo-verde"></div>
-              PÁCORA
-            </div>
-            <div class="casilla-horizontal casilla-fondo-comunitario">FONDO<br>COMUNITARIO</div>
-            <div class="casilla-horizontal municipio-aranzazu">
-              <div class="color-franja grupo-verde"></div>
-              ARANZAZU
-            </div>
-            <div class="casilla-esquina casilla-salida">SALIDA</div>
-        </div>
-
-        <!-- COLUMNA DERECHA -->
-        <div class="columna-derecha-tablero">
-            <div class="casilla-vertical municipio-chinchina">
-              <div class="color-franja grupo-rosado"></div>
-              CHINCHINÁ
-            </div>
-            <div class="casilla-vertical municipio-manizales">
-              <div class="color-franja grupo-rosado"></div>
-              MANIZALES
-            </div>
-            <div class="casilla-vertical casilla-fondo-comunitario">FONDO<br>COMUNITARIO</div>
-            <div class="casilla-vertical municipio-pensilvania">
-              <div class="color-franja grupo-rosado"></div>
-              PENSILVANIA
-            </div>
-            <div class="casilla-vertical terminal-chinchina">TERMINAL<br>CHINCHINÁ</div>
-            <div class="casilla-vertical casilla-suerte">SUERTE</div>
-            <div class="casilla-vertical municipio-aguadas">
-              <div class="color-franja grupo-azul"></div>
-              AGUADAS
-            </div>
-            <div class="casilla-vertical casilla-impuesto-cafetero">IMPUESTO<br>CAFETERO</div>
-            <div class="casilla-vertical municipio-viterbo">
-              <div class="color-franja grupo-azul"></div>
-              VITERBO
-            </div>
-        </div>
-
-        <!-- CENTRO -->
-        <div class="centro-tablero">
-            <div class="contenido-centro-tablero">
-                <div class="titulo-centro-tablero">MONOPOLY CALDAS</div>
-                <div class="subtitulo-centro-tablero">Juego de municipios</div>
-                <div class="area-centro-tablero">ÁREA<br>DEL TABLERO</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-     
 </body>
+
 </html>
