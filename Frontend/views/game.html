@@ -1,0 +1,22 @@
+<!-- game.html: Menú lateral derecho modular para Monopoly -->
+<nav class="sidebar-monopoly d-flex flex-column align-items-center bg-light border-start p-3" id="sidebar-monopoly">
+  <h5 class="mb-4 text-center">Acciones</h5>
+  <button class="btn btn-primary w-100 mb-3" id="btnLanzarDados">
+    <span id="dados-resultado">🎲🎲</span> Lanzar Dados
+  </button>
+  <div class="d-grid gap-2 w-100" id="acciones-casilla">
+    <button class="btn btn-success" id="btnComprarPropiedad" disabled>Comprar Propiedad</button>
+    <button class="btn btn-warning" id="btnPagarRenta" disabled>Pagar Renta</button>
+    <button class="btn btn-info" id="btnConstruirCasa" disabled>Construir Casa</button>
+    <button class="btn btn-info" id="btnConstruirHotel" disabled>Construir Hotel</button>
+    <button class="btn btn-secondary" id="btnHipotecar" disabled>Hipotecar Propiedad</button>
+    <button class="btn btn-secondary" id="btnDeshipotecar" disabled>Deshipotecar Propiedad</button>
+    <button class="btn btn-outline-primary" id="btnCartaSorpresa" disabled>Carta Sorpresa</button>
+    <button class="btn btn-outline-primary" id="btnCajaComunidad" disabled>Caja de Comunidad</button>
+    <button class="btn btn-danger" id="btnPagarImpuesto" disabled>Pagar Impuesto</button>
+    <button class="btn btn-dark" id="btnIrCarcel" disabled>Ir a Cárcel / Pagar Salida</button>
+    <button class="btn btn-outline-success" id="btnFinalizarJuego">Finalizar Juego</button>
+  </div>
+  <hr class="my-3 w-100">
+  <button class="btn btn-outline-info w-100 mb-2" id="btnRankingSidebar">Ver Ranking Global</button>
+</nav>
