@@ -7,8 +7,8 @@
   <title>Monopoly</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  <link rel="stylesheet" href="assets/css/minty.css">
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="views/css/minty.css">
+  <link rel="stylesheet" href="views/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
     crossorigin="anonymous"></script>
@@ -62,143 +62,6 @@
   </nav>
 
 
-  <!-- Contenedor para banner y tablero -->
-  <div class="contenedor-banner-tablero">
-    <div class="tablero-monopoly">
-      <!-- FILA SUPERIOR (de izquierda a derecha) -->
-      <div class="fila-superior-tablero">
-        <div class="casilla-esquina parqueo-gratis">PARQUEO<br>GRATIS</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-rojo"></div>
-          AVENIDA KENTUCKY
-        </div>
-        <div class="casilla-horizontal casilla-suerte">SORPRESA</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-rojo"></div>
-          AVENIDA INDIANA
-        </div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-rojo"></div>
-          AVENIDA ILLINOIS
-        </div>
-        <div class="casilla-horizontal">FERROCARRIL<br>B&amp;O</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-amarillo"></div>
-          AVENIDA ATLÁNTICO
-        </div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-amarillo"></div>
-          AVENIDA VENTNOR
-        </div>
-        <div class="casilla-horizontal">COMPAÑÍA<br>DE AGUA</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-amarillo"></div>
-          JARDINES MARVIN
-        </div>
-        <div class="casilla-esquina casilla-ve-carcel">VE A<br>LA CÁRCEL</div>
-      </div>
-
-
-
-      <!-- COLUMNA IZQUIERDA (de abajo hacia arriba) -->
-      <div class="columna-izquierda-tablero">
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-naranja"></div>
-          AVENIDA NUEVA YORK
-        </div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-naranja"></div>
-          AVENIDA TENNESSEE
-        </div>
-        <div class="casilla-vertical casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-naranja"></div>
-          PLAZA ST. JAMES
-        </div>
-        <div class="casilla-vertical">FERROCARRIL<br>PENNSYLVANIA</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-rosado"></div>
-          AVENIDA VIRGINIA
-        </div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-rosado"></div>
-          AVENIDA STATES
-        </div>
-        <div class="casilla-vertical">COMPAÑÍA<br>DE ELECTRICIDAD</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-rosado"></div>
-          PLAZA ST. CHARLES
-        </div>
-      </div>
-
-      <!-- FILA INFERIOR (de derecha a izquierda) --> (de derecha a izquierda) -->
-      <div class="fila-inferior-tablero">
-        <div class="casilla-esquina casilla-carcel">CÁRCEL<br>/solo de visita<span style="font-size:12px"></span></div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-celeste"></div>
-          AVENIDA CONNECTICUT
-        </div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-celeste"></div>
-          AVENIDA VERMONT
-        </div>
-        <div class="casilla-horizontal casilla-suerte">SORPRESA</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-celeste"></div>
-          AVENIDA ORIENTAL
-        </div>
-        <div class="casilla-horizontal">FERROCARRIL<br>READING</div>
-        <div class="casilla-horizontal">IMPUESTO<br>SOBRE INGRESOS</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-marron"></div>
-          AVENIDA BÁLTICA
-        </div>
-        <div class="casilla-horizontal casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
-        <div class="casilla-horizontal">
-          <div class="color-franja grupo-marron"></div>
-          AVENIDA MEDITERRÁNEO
-        </div>
-        <div class="casilla-esquina casilla-salida">SALIDA</div>
-      </div>
-
-      <!-- COLUMNA DERECHA (de arriba hacia abajo) -->
-      <div class="columna-derecha-tablero">
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-verde"></div>
-          AVENIDA PACÍFICO
-        </div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-verde"></div>
-          AVENIDA CAROLINA DEL NORTE
-        </div>
-        <div class="casilla-vertical casilla-fondo-comunitario">CAJA<br>DE COMUNIDAD</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-verde"></div>
-          AVENIDA PENSILVANIA
-        </div>
-        <div class="casilla-vertical">FERROCARRIL<br>SHORT LINE</div>
-        <div class="casilla-vertical casilla-suerte">SORPRESA</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-azul"></div>
-          AVENIDA PARQUE
-        </div>
-        <div class="casilla-vertical">IMPUESTO<br>DE LUJO</div>
-        <div class="casilla-vertical">
-          <div class="color-franja grupo-azul"></div>
-          PASEO DEL PARQUE
-        </div>
-      </div>
-
-      <!-- CENTRO -->
-      <div class="centro-tablero">
-        <div class="contenido-centro-tablero">
-          <div class="titulo-centro-tablero">MONOPOLY</div>
-          <div class="subtitulo-centro-tablero">Tablero clásico</div>
-          <div class="area-centro-tablero">ÁREA<br>DEL TABLERO</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
 
 </body>
