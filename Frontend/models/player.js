@@ -9,7 +9,7 @@ import {
     formatPlayerData,
     validateScoreData,
     getFlagUrl
-} from './api.js';
+} from '../controllers/api.js';
 
 // ========== CLASE PLAYER (con integración API) ==========
 class Player {
