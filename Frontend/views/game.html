@@ -1,4 +1,13 @@
-<!-- game.html: Menú lateral derecho modular para Monopoly -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Tablero Monopoly</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- game.html: Menú lateral derecho modular para Monopoly -->
 <nav class="sidebar-monopoly d-flex flex-column align-items-center bg-light border-start p-3" id="sidebar-monopoly">
   <h5 class="mb-4 text-center">Acciones</h5>
   <button class="btn btn-primary w-100 mb-3" id="btnLanzarDados">
@@ -20,3 +29,322 @@
   <hr class="my-3 w-100">
   <button class="btn btn-outline-info w-100 mb-2" id="btnRankingSidebar">Ver Ranking Global</button>
 </nav>
+
+    <div class="main-container">
+        <header class="controls">
+            <h1>Tablero de Monopoly - Prueba</h1>
+            <div class="control-buttons">
+                <button id="btnGenerate40">Generar 40 Casillas</button>
+                <button id="btnGenerate28">Generar 28 Casillas</button>
+                <button id="btnGenerate16">Generar 16 Casillas</button>
+                <button id="btnChangeLanguage">Cambiar Idioma (EN)</button>
+                <button id="btnAddPlayer">Agregar Jugador</button>
+                <button id="btnReset">Resetear</button>
+            </div>
+            <div class="info-panel">
+                <div id="boardInfo" class="board-info">
+                    <p>Casillas totales: <span id="totalSquares">0</span></p>
+                    <p>Idioma actual: <span id="currentLanguage">Español</span></p>
+                    <p>Jugadores: <span id="playerCount">0</span></p>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Contenedor donde se renderizará el tablero -->
+            <div id="boardContainer" class="board-container">
+                <div class="loading">
+                    <p>Inicializando tablero...</p>
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="game-controls">
+            <div class="player-actions">
+                <h3>Acciones de Jugador</h3>
+                <button id="btnMovePlayer">Mover Jugador</button>
+                <button id="btnBuyProperty">Comprar Propiedad</button>
+                <button id="btnBuildHouse">Construir Casa</button>
+                <button id="btnMortgage">Hipotecar</button>
+            </div>
+            <div class="game-info">
+                <h3>Información del Juego</h3>
+                <div id="gameLog" class="game-log">
+                    <p>Listo para comenzar...</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/Frontend/utils/BoardUtils.js"></script>
+    <script src="/Frontend/models/Board.js"></script>
+    <script src="/Frontend/utils/BoardRenderer.js"></script>
+    
+    <script>
+        // Variables globales
+        let board = null;
+        let renderer = null;
+        let currentLanguage = 'es';
+        let playerCounter = 0;
+        let currentPlayer = null;
+        
+        // Colores para jugadores
+        const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeGame();
+            setupEventListeners();
+        });
+
+        async function initializeGame() {
+            try {
+                // Crear instancia del tablero con datos de prueba
+                board = new MonopolyBoard.Board();
+                
+                // Generar datos de prueba inicialmente con 40 casillas
+                await generateTestBoard(40);
+                
+                log('Juego inicializado correctamente');
+            } catch (error) {
+                console.error('Error al inicializar:', error);
+                log('Error al inicializar el juego: ' + error.message);
+            }
+        }
+
+        async function generateTestBoard(totalSquares) {
+            try {
+                // Generar datos de prueba
+                const testData = BoardUtils.generateTestBoardData(totalSquares, currentLanguage);
+                
+                // Validar datos
+                const validation = BoardUtils.validateBoardData(testData);
+                if (!validation.valid) {
+                    throw new Error(validation.error);
+                }
+
+                // Cargar datos en el tablero
+                board.loadSquares(testData);
+                board.organizeSquares();
+
+                // Crear/recrear el renderer
+                if (renderer) {
+                    renderer.destroy();
+                }
+
+                renderer = new MonopolyBoardRenderer.BoardRenderer('#boardContainer', board, {
+                    totalSquares: totalSquares,
+                    language: currentLanguage,
+                    boardSize: Math.min(800, window.innerWidth - 40),
+                    cornerSize: 100,
+                    sideSquareWidth: 70,
+                    sideSquareHeight: 100
+                });
+
+                // Renderizar
+                await renderer.render();
+
+                // Actualizar info
+                updateBoardInfo(validation.totalSquares);
+                
+                log(`Tablero generado: ${validation.totalSquares} casillas`);
+
+            } catch (error) {
+                console.error('Error generando tablero:', error);
+                log('Error: ' + error.message);
+            }
+        }
+
+        function setupEventListeners() {
+            // Botones de generación
+            document.getElementById('btnGenerate40').addEventListener('click', () => generateTestBoard(40));
+            document.getElementById('btnGenerate28').addEventListener('click', () => generateTestBoard(28));
+            document.getElementById('btnGenerate16').addEventListener('click', () => generateTestBoard(16));
+            
+            // Cambio de idioma
+            document.getElementById('btnChangeLanguage').addEventListener('click', toggleLanguage);
+            
+            // Jugadores
+            document.getElementById('btnAddPlayer').addEventListener('click', addPlayer);
+            document.getElementById('btnReset').addEventListener('click', resetGame);
+            
+            // Acciones de juego
+            document.getElementById('btnMovePlayer').addEventListener('click', movePlayer);
+            document.getElementById('btnBuyProperty').addEventListener('click', buyProperty);
+            document.getElementById('btnBuildHouse').addEventListener('click', buildHouse);
+            document.getElementById('btnMortgage').addEventListener('click', mortgageProperty);
+
+            // Eventos del tablero
+            document.getElementById('boardContainer').addEventListener('squareClick', handleSquareClick);
+        }
+
+        async function toggleLanguage() {
+            currentLanguage = currentLanguage === 'es' ? 'en' : 'es';
+            const btn = document.getElementById('btnChangeLanguage');
+            btn.textContent = currentLanguage === 'es' ? 'Cambiar Idioma (EN)' : 'Change Language (ES)';
+            
+            document.getElementById('currentLanguage').textContent = currentLanguage === 'es' ? 'Español' : 'English';
+            
+            // Regenerar tablero con nuevo idioma
+            const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
+            await generateTestBoard(currentTotal);
+            
+            log(`Idioma cambiado a: ${currentLanguage}`);
+        }
+
+        function addPlayer() {
+            playerCounter++;
+            const playerId = `player${playerCounter}`;
+            const color = playerColors[(playerCounter - 1) % playerColors.length];
+            
+            const playerData = {
+                id: playerId,
+                name: `Jugador ${playerCounter}`,
+                color: color,
+                money: 1500,
+                position: 0
+            };
+
+            if (renderer) {
+                renderer.addPlayer(playerId, playerData);
+                renderer.movePlayer(playerId, 0); // Empezar en GO
+            }
+
+            currentPlayer = playerId;
+            updatePlayerCount();
+            log(`${playerData.name} agregado al juego`);
+        }
+
+        function movePlayer() {
+            if (!currentPlayer || !renderer) {
+                log('No hay jugador seleccionado');
+                return;
+            }
+
+            // Simular tirada de dados (1-12)
+            const diceRoll = Math.floor(Math.random() * 12) + 1;
+            const player = renderer.players.get(currentPlayer);
+            const newPosition = (player.position + diceRoll) % (parseInt(document.getElementById('totalSquares').textContent) || 40);
+            
+            renderer.movePlayer(currentPlayer, newPosition);
+            log(`${player.name} tiró ${diceRoll} y se movió a la posición ${newPosition}`);
+        }
+
+        function buyProperty() {
+            if (!currentPlayer || !board) {
+                log('No hay jugador seleccionado');
+                return;
+            }
+
+            const player = renderer.players.get(currentPlayer);
+            const square = board.getSquareByPosition(player.position);
+            
+            if (square && (square.isProperty() || square.isRailroad()) && !square.owner) {
+                square.owner = currentPlayer;
+                renderer.updateSquare(square.id, { owner: currentPlayer });
+                log(`${player.name} compró ${square.name} por $${square.price}`);
+            } else {
+                log('No se puede comprar esta propiedad');
+            }
+        }
+
+        function buildHouse() {
+            if (!currentPlayer || !board) {
+                log('No hay jugador seleccionado');
+                return;
+            }
+
+            const player = renderer.players.get(currentPlayer);
+            const square = board.getSquareByPosition(player.position);
+            
+            if (square && square.isProperty() && square.owner === currentPlayer && square.canBuild()) {
+                if (square.addHouse()) {
+                    renderer.updateSquare(square.id, { houses: square.houses });
+                    log(`Casa construida en ${square.name}. Total: ${square.houses} casas`);
+                } else {
+                    log('No se puede construir en esta propiedad');
+                }
+            } else {
+                log('No puedes construir aquí');
+            }
+        }
+
+        function mortgageProperty() {
+            if (!currentPlayer || !board) {
+                log('No hay jugador seleccionado');
+                return;
+            }
+
+            const player = renderer.players.get(currentPlayer);
+            const square = board.getSquareByPosition(player.position);
+            
+            if (square && square.owner === currentPlayer && !square.isMortgaged) {
+                const mortgageValue = square.mortgageProperty();
+                if (mortgageValue > 0) {
+                    renderer.updateSquare(square.id, { isMortgaged: true });
+                    log(`${square.name} hipotecada por $${mortgageValue}`);
+                } else {
+                    log('No se puede hipotecar esta propiedad');
+                }
+            } else {
+                log('No puedes hipotecar esta propiedad');
+            }
+        }
+
+        function resetGame() {
+            if (board) {
+                board.reset();
+            }
+            if (renderer) {
+                renderer.players.clear();
+            }
+            
+            playerCounter = 0;
+            currentPlayer = null;
+            updatePlayerCount();
+            
+            // Regenerar tablero
+            const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
+            generateTestBoard(currentTotal);
+            
+            log('Juego reseteado');
+        }
+
+        function handleSquareClick(event) {
+            const { square, position } = event.detail;
+            log(`Clic en: ${square.name} (Posición ${position})`);
+            
+            // Si hay jugador activo, mostrar información
+            if (currentPlayer) {
+                const player = renderer.players.get(currentPlayer);
+                log(`${player.name} está en posición ${player.position}, clic en ${position}`);
+            }
+        }
+
+        function updateBoardInfo(totalSquares) {
+            document.getElementById('totalSquares').textContent = totalSquares;
+        }
+
+        function updatePlayerCount() {
+            document.getElementById('playerCount').textContent = playerCounter;
+        }
+
+        function log(message) {
+            const gameLog = document.getElementById('gameLog');
+            const timestamp = new Date().toLocaleTimeString();
+            gameLog.innerHTML += `<p><span class="timestamp">[${timestamp}]</span> ${message}</p>`;
+            gameLog.scrollTop = gameLog.scrollHeight;
+        }
+
+        // Responsive design
+        window.addEventListener('resize', () => {
+            if (renderer) {
+                const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
+                generateTestBoard(currentTotal);
+            }
+        });
+    </script>
+</body>
+</html>

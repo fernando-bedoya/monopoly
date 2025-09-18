@@ -5,487 +5,609 @@
   Use ../utils/bootstrap-5.3.3/css/TEMA/bootstrap.min.css, siendo TEMA el nombre de la carpeta correspondiente al tema
 */
 @import '../asstes/css/minty.css';
-/* Paleta de cultura cafetera */
-:root {
-    --cafe-oscuro: #6f4e37;
-    --cafe-claro: #c8b08b;
-    --beige: #f5ecd7;
-    --verde-cafe: #4e6e58;
-    --dorado: #bfa14a;
+/* Reset y configuración base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-
-/* Estilos provicionales inicio */
-/* --- Mejoras visuales modernas --- */
-
-/* Sombra profunda y fondo degradado para el tablero */
-.tablero-monopoly {
-    box-shadow: 0 12px 40px rgba(111, 78, 55, 0.22), 0 2px 8px rgba(191, 161, 74, 0.10);
-    background: linear-gradient(135deg, #f5ecd7 80%, #e7d3b0 100%);
-    border: 3px solid var(--dorado);
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+    line-height: 1.6;
 }
 
-/* Animación en hover de casillas */
-.casilla-horizontal:hover, .casilla-vertical:hover, .casilla-esquina:hover {
-    transform: scale(1.07) rotate(-2deg);
-    box-shadow: 0 6px 18px rgba(191, 161, 74, 0.18);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-/* Degradado en casillas de esquina */
-.casilla-esquina {
-    background: linear-gradient(135deg, var(--cafe-oscuro) 70%, var(--dorado) 100%);
-}
-
-/* Iconos en casillas especiales */
-.casilla-salida::before {
-    content: "🚦 ";
-    font-size: 18px;
-}
-.casilla-carcel::before {
-    content: "🔒 ";
-    font-size: 18px;
-}
-.parqueo-gratis::before {
-    content: "🅿️ ";
-    font-size: 18px;
-}
-.casilla-suerte::before {
-    content: "🍀 ";
-    font-size: 18px;
-}
-.casilla-fondo-comunitario::before {
-    content: "🎁 ";
-    font-size: 18px;
-}
-
-/* Tipografía llamativa para títulos */
-.titulo-centro-tablero {
-    font-family: 'Bebas Neue', 'Montserrat', Arial, sans-serif;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 8px #bfa14a;
-    color: var(--dorado);
-}
-
-/* Colores vivos en hover */
-.casilla-horizontal:hover {
-    background: linear-gradient(90deg, var(--dorado) 60%, var(--beige) 100%);
-    color: var(--cafe-oscuro);
-}
-.casilla-vertical:hover {
-    background: linear-gradient(90deg, var(--verde-cafe) 60%, var(--beige) 100%);
-    color: var(--dorado);
-}
-.casilla-esquina:hover {
-    background: linear-gradient(135deg, var(--dorado) 70%, var(--cafe-oscuro) 100%);
-    color: var(--beige);
-}
-
-/* Bordes dobles en casillas especiales */
-.casilla-esquina, .casilla-salida, .casilla-carcel, .parqueoPALESTINA
--gratis {
-    border: 3px double var(--dorado);
-}
-
-/* Fondo suave para el centro */
-.centro-tablero {
-    background: linear-gradient(135deg, #f5ecd7 80%, #c8b08b 100%);
-    box-shadow: 0 2px 12px rgba(191, 161, 74, 0.12);
-}
-
-/* --- Fin de mejoras visuales --- */
-/* Estilos provicionales fin */
-
-/* Contenedor del tablero y banner */
-.contenedor-banner-tablero {
-    position: relative;
-    width: 800px;
-    height: 800px;
-    margin: 20px auto;
-}
-
-/* Banner como fondo principal de la página */
-.banner-fondo-principal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-    z-index: 0;
-    opacity: 0.85;
-    pointer-events: none;
-}
-
-/* Banner como fondo del tablero */
-.banner-fondo {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 800px;
-    height: 800px;
-    object-fit: cover;
-    z-index: 1;
-    border-radius: 16px;
-}
-
-/* El resto del contenido debe estar encima */
-body, .contenedor-banner-tablero, .tablero-monopoly, nav {
-    position: relative;
-    z-index: 2;
-}
-
-/* Tablero principal */
-.tablero-monopoly {
-    width: 800px;
-    height: 800px;
-    border: 3px solid black;
-    margin: 20px auto;
-    position: relative;
-    z-index: 2;
-    background: rgba(245,236,215,0.85); /* beige semitransparente */
-    border: 3px solid var(--cafe-oscuro);
-    border-radius: 18px;
-    box-shadow: 0 4px 16px rgba(111, 78, 55, 0.12);
-    transition: box-shadow 0.2s;
-}
-
-/* Fondo semitransparente para el centro del tablero */
-.centro-tablero {
-    position: absolute;
-    top: 80px;
-    left: 80px;
-    width: 640px;
-    height: 640px;
-    border: 2px solid black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(200,176,139,0.25); /* café claro semitransparente */
-    border-radius: 14px;
-    border: 2px solid var(--dorado);
-    box-shadow: none;
-}
-
-/* Contenido del centro del tablero */
-.contenido-centro-tablero {
-    text-align: center;
-}
-
-/* Títulos del centro */
-.titulo-centro-tablero {
-    font-size: 40px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    color: var(--verde-cafe);
-    text-shadow: none;
-}
-
-/* Subtítulos del centro */
-.subtitulo-centro-tablero {
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: var(--cafe-oscuro);
-    text-shadow: none;
-}
-
-/* Área central */
-.area-centro-tablero {
-    width: 200px;
-    height: 200px;
-    border: 2px solid black;
-    margin: 20px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    text-align: center;
-    border-radius: 12px;
-    background: var(--beige);
-    color: var(--cafe-oscuro);
-    font-size: 18px;
-    font-weight: bold;
-    text-shadow: none;
-    border: 2px solid var(--dorado);
-}
-
-/* Filas del tablero */
-.fila-superior-tablero, .fila-inferior-tablero {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 80px;
-    display: flex;
-}
-.fila-superior-tablero { top: 0; }
-.fila-inferior-tablero { bottom: 0; }
-
-/* Columnas del tablero */
-.columna-izquierda-tablero, .columna-derecha-tablero {
-    position: absolute;
-    top: 80px;
-    width: 80px;
-    height: 640px;
+/* Contenedor principal */
+.main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
-.columna-izquierda-tablero { left: 0; }
-.columna-derecha-tablero { right: 0; }
 
-/* Casillas horizontales */
-.casilla-horizontal {
-    width: 80px;
-    height: 80px;
-    border: 2px solid black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
+/* Header con controles */
+.controls {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.controls h1 {
     text-align: center;
-    background: var(--cafe-claro);
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 2.2em;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.control-buttons button {
+    background: linear-gradient(145deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 12px 20px;
     border-radius: 8px;
-    border: 2px solid var(--cafe-oscuro);
-    color: var(--cafe-oscuro);
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-shadow: none;
-    transition: background 0.2s, color 0.2s;
-    box-shadow: none;
-}
-.casilla-horizontal:hover {
-    background: var(--dorado);
-    color: var(--beige);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Casillas verticales */
-.casilla-vertical {
-    width: 80px;
-    height: 80px;
-    border: 2px solid black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    text-align: center;
-    background: var(--beige);
-    border-radius: 8px;
-    border: 2px solid var(--verde-cafe);
-    color: var(--verde-cafe);
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-shadow: none;
-    transition: background 0.2s, color 0.2s;
-    box-shadow: none;
-}
-.casilla-vertical:hover {
-    background: var(--verde-cafe);
-    color: var(--beige);
+.control-buttons button:hover {
+    background: linear-gradient(145deg, #45a049, #3d8b40);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
 }
 
-/* Casillas de esquina */
-.casilla-esquina {
-    width: 80px;
-    height: 80px;
-    border: 2px solid black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    text-align: center;
-    background: var(--cafe-oscuro);
+.control-buttons button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Botones específicos */
+#btnChangeLanguage {
+    background: linear-gradient(145deg, #2196F3, #1976D2);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+#btnChangeLanguage:hover {
+    background: linear-gradient(145deg, #1976D2, #1565C0);
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+#btnAddPlayer {
+    background: linear-gradient(145deg, #FF9800, #F57C00);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+#btnAddPlayer:hover {
+    background: linear-gradient(145deg, #F57C00, #E65100);
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+}
+
+#btnReset {
+    background: linear-gradient(145deg, #f44336, #d32f2f);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+#btnReset:hover {
+    background: linear-gradient(145deg, #d32f2f, #c62828);
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+/* Panel de información */
+.info-panel {
+    background: rgba(255, 255, 255, 0.8);
     border-radius: 10px;
-    border: 2px solid var(--dorado);
-    color: var(--beige);
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-shadow: none;
-    transition: background 0.2s, color 0.2s;
+    padding: 15px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.board-info {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.board-info p {
+    margin: 0;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.board-info span {
+    color: #27ae60;
+    font-weight: 700;
+}
+
+/* Contenedor principal del contenido */
+main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+/* Contenedor del tablero */
+.board-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    min-height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Estado de carga */
+.loading {
+    text-align: center;
+    color: #666;
+}
+
+.loading p {
+    font-size: 18px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Tablero de Monopoly */
+.monopoly-board-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    background: transparent;
+    border-radius: 15px;
+    padding: 20px;
+    position: relative;
+}
+
+.monopoly-board {
+    position: relative;
+    background: #c8e6c9;
+    border: 4px solid #2e7d32;
+    border-radius: 15px;
+    box-shadow: 
+        0 0 0 2px rgba(46, 125, 50, 0.3),
+        0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Centro del tablero */
+.board-center {
+    background: linear-gradient(135deg, #f1f8e9, #dcedc1) !important;
+    border-radius: 10px;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    text-align: center !important;
+    color: #2e7d32 !important;
+}
+
+/* Casillas del tablero */
+.square {
+    border: 2px solid #333 !important;
+    background: white !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    position: absolute !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+.square:hover {
+    transform: scale(1.08) !important;
+    z-index: 10 !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+    border-color: #2196F3 !important;
+    border-width: 3px !important;
+}
+
+/* Tipos de casillas */
+.square-special {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2) !important;
+    border-color: #ff9800 !important;
+}
+
+.square-property {
+    background: linear-gradient(135deg, #ffffff, #f8f9fa) !important;
+}
+
+.square-railroad {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb) !important;
+    border-color: #2196F3 !important;
+}
+
+.square-chance, .square-community_chest {
+    background: linear-gradient(135deg, #fce4ec, #f8bbd9) !important;
+    border-color: #e91e63 !important;
+}
+
+.square-tax {
+    background: linear-gradient(135deg, #fff8e1, #ffecb3) !important;
+    border-color: #ffc107 !important;
+}
+
+/* Contenido de las casillas */
+.property-color {
+    border-bottom: 1px solid #333 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.square-content {
+    padding: 4px !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    text-align: center !important;
+    overflow: hidden !important;
+}
+
+.square-name {
+    font-weight: bold !important;
+    line-height: 1.1 !important;
+    margin-bottom: 2px !important;
+    word-wrap: break-word !important;
+    color: #2c3e50 !important;
+}
+
+.square-price {
+    color: #27ae60 !important;
+    font-weight: 600 !important;
+    margin: 1px 0 !important;
+}
+
+.property-status {
+    font-size: 8px !important;
+    padding: 2px !important;
+    border-radius: 3px !important;
+    margin-top: auto !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+}
+
+/* Área de jugadores */
+.players-area {
+    position: absolute !important;
+    bottom: 2px !important;
+    right: 2px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 2px !important;
+    z-index: 5 !important;
+}
+
+.player-piece {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    border: 2px solid #333 !important;
+    display: inline-block !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.player-piece:hover {
+    transform: scale(1.2) !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Construcciones */
+.property-buildings {
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    display: flex !important;
+    gap: 1px !important;
+    z-index: 5 !important;
+}
+
+.house {
+    width: 6px !important;
+    height: 6px !important;
+    background: #4caf50 !important;
+    border-radius: 1px !important;
+    border: 1px solid #2e7d32 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.hotel {
+    width: 8px !important;
+    height: 6px !important;
+    background: #f44336 !important;
+    border-radius: 1px !important;
+    border: 1px solid #c62828 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Tooltip */
+.square-tooltip {
+    position: absolute !important;
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: white !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    max-width: 200px !important;
+    z-index: 1000 !important;
+    pointer-events: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Footer con controles del juego */
+.game-controls {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.player-actions, .game-info {
+    flex: 1;
+    min-width: 300px;
+}
+
+.player-actions h3, .game-info h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 5px;
+}
+
+.player-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.player-actions button {
+    background: linear-gradient(145deg, #673AB7, #512DA8);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(103, 58, 183, 0.3);
+}
+
+.player-actions button:hover {
+    background: linear-gradient(145deg, #512DA8, #4527A0);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(103, 58, 183, 0.4);
+}
+
+.player-actions button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
     box-shadow: none;
 }
-.casilla-esquina:hover {
-    background: var(--dorado);
-    color: var(--cafe-oscuro);
+
+/* Log del juego */
+.game-log {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.4;
 }
 
-/* Animación sutil al tablero */
-@keyframes resplandorTablero {
-    0% { box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);}
-    50% { box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.55);}
-    100% { box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);}
-}
-.tablero-monopoly {
-    animation: resplandorTablero 4s infinite;
+.game-log p {
+    margin: 5px 0;
+    color: #2c3e50;
 }
 
-/* Asegurar que cada casilla sea relativa */
-.casilla-horizontal,
-.casilla-vertical {
-  position: relative;
-  overflow: hidden;
+.game-log .timestamp {
+    color: #7f8c8d;
+    font-weight: normal;
 }
 
-/* Franja de color en la parte superior */
-.color-franja {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 14px;
-  border-bottom: 1px solid black;
+/* Scrollbar personalizado */
+.game-log::-webkit-scrollbar {
+    width: 6px;
 }
 
-  /* Colores oficiales tipo Monopoly */
-  .grupo-marron   { background: #8B4513; }
-  .grupo-celeste  { background: #ADD8E6; }
-  .grupo-rosado   { background: #FF69B4; }
-  .grupo-naranja  { background: #FFA500; }
-  .grupo-rojo     { background: #FF0000; }
-  .grupo-amarillo { background: #FFFF00; }
-  .grupo-verde    { background: #008000; }
-  .grupo-azul     { background: #0000FF; }
-  
-  
-
-/* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
-.parqueo-gratis {}
-
-.casilla-ve-carcel {}
-
-.casilla-carcel {}
-
-.casilla-salida {}
-
-.casilla-suerte {}
-
-.casilla-fondo-comunitario {}
-
-.casilla-hidroelectrica {}
-
-.casilla-impuesto-cafetero {}
-
-.empresa-cafe {}
-
-.terminal-manizales {}
-
-.terminal-la-dorada {}
-
-.terminal-riosucio {}
-
-.terminal-chinchina {}
-
-.municipio-marulanda {}
-
-.municipio-manzanares {}
-
-.municipio-filadelfia {}
-
-.municipio-supia {}
-
-.municipio-marmato {}
-
-.municipio-neira {}
-
-.municipio-palestina {}
-
-.municipio-villamaria {}
-
-.municipio-anserma {}
-
-.municipio-san-jose {}
-
-.municipio-riosucio {}
-
-.municipio-norcasia {}
-
-.municipio-victoria {}
-
-.municipio-la-dorada {}
-
-.municipio-salamina {}
-
-.municipio-pacora {}
-
-.municipio-chinchina {}
-
-.municipio-manizales {}
-
-.municipio-pensilvania {}
-
-.municipio-aguadas {}
-
-.municipio-viterbo {}
-
-/* ...agrega estilos personalizados si lo deseas... */
-/* Ejemplo de clases específicas para casillas (puedes personalizar colores, etc.) */
-.parqueo-gratis {}
-
-.casilla-ve-carcel {}
-
-.casilla-carcel {}
-
-.casilla-salida {}
-
-.casilla-suerte {}
-
-.casilla-fondo-comunitario {}
-
-.casilla-hidroelectrica {}
-
-.casilla-impuesto-cafetero {}
-
-.empresa-cafe {}
-
-.terminal-manizales {}
-
-.terminal-la-dorada {}
-
-.terminal-riosucio {}
-
-.terminal-chinchina {}
-
-.municipio-marulanda {}
-
-.municipio-manzanares {}
-
-.municipio-filadelfia {}
-
-.municipio-supia {}
-
-.municipio-marmato {}
-
-.municipio-neira {}
-
-.municipio-palestina {}
-
-.municipio-villamaria {}
-
-.municipio-anserma {}
-
-.municipio-san-jose {}
-
-.municipio-riosucio {}
-
-.municipio-norcasia {}
-
-.municipio-victoria {}
-
-.municipio-la-dorada {}
-
-.municipio-salamina {}
-
-.municipio-pacora {}
-
-.municipio-chinchina {}
-
-.municipio-manizales {}
-
-.municipio-pensilvania {}
-
-.municipio-aguadas {}
-
-.municipio-viterbo {}
-
-/* ...agrega estilos personalizados si lo deseas... */
+.game-log::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.game-log::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.game-log::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .main-container {
+        padding: 15px;
+    }
+    
+    .game-controls {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .player-actions, .game-info {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-container {
+        padding: 10px;
+    }
+    
+    .controls h1 {
+        font-size: 1.8em;
+    }
+    
+    .control-buttons {
+        justify-content: center;
+    }
+    
+    .control-buttons button {
+        padding: 10px 16px;
+        font-size: 12px;
+    }
+    
+    .board-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .board-container {
+        padding: 15px;
+    }
+    
+    .monopoly-board-container {
+        padding: 10px;
+    }
+    
+    .board-center {
+        font-size: 16px !important;
+    }
+    
+    .game-log {
+        height: 150px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .controls h1 {
+        font-size: 1.5em;
+    }
+    
+    .control-buttons {
+        gap: 8px;
+    }
+    
+    .control-buttons button {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+    
+    .board-container {
+        padding: 10px;
+    }
+    
+    .game-controls {
+        padding: 15px;
+    }
+    
+    .player-actions button {
+        padding: 10px 16px;
+        font-size: 12px;
+    }
+}
+
+/* Animaciones adicionales */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.controls, .board-container, .game-controls {
+    animation: slideIn 0.6s ease-out;
+}
+
+/* Estados de enfoque para accesibilidad */
+button:focus {
+    outline: 3px solid rgba(33, 150, 243, 0.5);
+    outline-offset: 2px;
+}
+
+.square:focus {
+    outline: 3px solid rgba(33, 150, 243, 0.7) !important;
+    outline-offset: 2px !important;
+}
+
+/* Modo de alto contraste */
+@media (prefers-contrast: high) {
+    .square {
+        border-width: 3px !important;
+        border-color: #000 !important;
+    }
+    
+    .property-color {
+        border-bottom-width: 2px !important;
+    }
+    
+    .player-piece {
+        border-width: 3px !important;
+    }
+}
