@@ -610,4 +610,48 @@ button:focus {
     .player-piece {
         border-width: 3px !important;
     }
+
+    /* --- Barra lateral de navegación Monopoly --- */
+.sidebar-monopoly {
+  min-height: 70vh;
+  box-shadow: 0 0 16px rgba(111, 78, 55, 0.10);
+  border-radius: 12px 0 0 12px;
+  background: linear-gradient(135deg, #f5ecd7 80%, #e7d3b0 100%);
+  border-left: 4px solid var(--dorado);
+  position: relative;
+}
+
+.sidebar-monopoly h5 {
+  color: var(--cafe-oscuro);
+  font-family: 'Montserrat', Arial, sans-serif;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#sidebar-monopoly .btn-primary {
+  background-color: var(--dorado);
+  border: none;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(191, 161, 74, 0.10);
+}
+
+#sidebar-monopoly .btn-primary:hover {
+  background-color: var(--cafe-oscuro);
+  color: #fff;
+}
+
+#acciones-casilla {
+  margin-top: 10px;
+}
+
+@media (max-width: 992px) {
+  .sidebar-monopoly {
+    min-height: 40vh;
+    border-radius: 0;
+    box-shadow: none;
+    border-left: 2px solid var(--dorado);
+  }
+}
 }
