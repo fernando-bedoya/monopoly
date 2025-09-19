@@ -62,65 +62,88 @@ class Carta {
      * (Sin estilos inline de color; todo lo maneja el CSS externo.)
      */
     render() {
-      const root = document.createElement("article");
-      root.className = `card-monopoly ${this.tipo}`;
-  
-      // Encabezado
-      const header = document.createElement("header");
-      header.className = "card-header";
-      header.innerHTML = `
-        <div class="chip-tipo">
-          ${this.tipo === "chance" ? "Sorpresa" : "Caja de Comunidad"}
-        </div>
-        <div class="icono">
-          <!-- SVG simple estilo Monopoly: sombrero -->
-          <svg viewBox="0 0 64 64" aria-hidden="true" class="icono-hat">
-            <path d="M10 40c0 6 10 10 22 10s22-4 22-10v-4H10v4z" />
-            <rect x="16" y="22" width="32" height="14" rx="3" ry="3"/>
-            <ellipse cx="32" cy="22" rx="18" ry="4"/>
-          </svg>
-        </div>
-      `;
-      root.appendChild(header);
-  
-      // Cuerpo
-      const body = document.createElement("div");
-      body.className = "card-body";
-      body.innerHTML = `
-        <p class="descripcion">${this.descripcion}</p>
-        <div class="valor ${this.esPositiva ? "positivo" : "negativo"}">
-          ${this.esPositiva ? "+$" : "-$"}${Math.abs(this.valor)}
-        </div>
-      `;
-      root.appendChild(body);
-  
-      // Pie con botones de acción (opcional para demo)
-      const footer = document.createElement("footer");
-      footer.className = "card-footer";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn-aplicar";
-      btn.textContent = "Aplicar efecto a Jugador Demo";
-      btn.addEventListener("click", () => {
-        // Jugador demo en la UI
-        const dineroEl = document.querySelector("#dinero-demo");
-        const dinero = Number(dineroEl?.textContent ?? "1500");
-        const jugadorDemo = { dinero };
-        const log = this.aplicarA(jugadorDemo);
-        if (dineroEl) dineroEl.textContent = String(jugadorDemo.dinero);
-  
-        const logEl = document.querySelector("#log");
-        if (logEl) {
-          const li = document.createElement("li");
-          li.textContent = `[${this.tipo}] ${this.descripcion} (Δ $${this.valor > 0 ? "+" : ""}${this.valor}) → Dinero: $${jugadorDemo.dinero}`;
-          logEl.prepend(li);
-        }
-        console.debug("LOG-CARTA", log);
-      });
-      footer.appendChild(btn);
-      root.appendChild(footer);
-  
-      return root;
+        const root = document.createElement("article");
+        root.className = `card-monopoly ${this.tipo}`;
+        root.setAttribute("data-id", String(this.id)); // para el número de serie
+
+        // Banda MONOPOLY
+        const band = document.createElement("div");
+        band.className = "band-logo";
+        band.textContent = "MONOPOLY";
+        root.appendChild(band);
+
+        // Encabezado
+        const header = document.createElement("header");
+        header.className = "card-header";
+        header.setAttribute("data-id", String(this.id));
+        header.innerHTML = `
+          <div class="chip-tipo">
+            ${this.tipo === "chance" ? "Sorpresa" : "Caja de Comunidad"}
+          </div>
+          <div class="icono">
+            ${this.tipo === "chance"
+                ? `
+                <!-- Icono Sorpresa: signo de interrogación -->
+                <svg viewBox="0 0 64 64" aria-hidden="true" class="icono-sorpresa">
+                  <path d="M32 8c-9.9 0-18 6.4-18 16h8c0-5 4.5-8 10-8s10 3 10 8c0 3.5-2.2 6-5.4 7.9-2.1 1.2-3.6 2.2-4.4 3.1-.8.9-1.2 2-.2 6h8c-.2-1.7-.2-2.5.2-3 .6-.8 1.6-1.6 3.6-2.8C48.6 32.3 52 28.1 52 24c0-9.6-8.1-16-20-16z"/>
+                  <circle cx="32" cy="52" r="4"/>
+                </svg>
+              `
+                : `
+                <!-- Icono Comunidad: cofre -->
+                <svg viewBox="0 0 64 64" aria-hidden="true" class="icono-cofre">
+                  <path d="M8 26v22c0 2.2 1.8 4 4 4h40c2.2 0 4-1.8 4-4V26H8zM56 20H8l6-8h36l6 8z"/>
+                  <rect x="28" y="30" width="8" height="10" rx="1" ry="1"/>
+                </svg>
+              `
+            }
+          </div>
+        `;
+        root.appendChild(header);
+
+        // Cuerpo
+        const body = document.createElement("div");
+        body.className = "card-body";
+        body.innerHTML = `
+          <p class="descripcion">${this.descripcion}</p>
+          <div class="valor ${this.esPositiva ? "positivo" : "negativo"}">
+            ${this.esPositiva ? "+$" : "-$"}${Math.abs(this.valor)}
+          </div>
+        `;
+        root.appendChild(body);
+
+        // Pie con botón y sello legal
+        const footer = document.createElement("footer");
+        footer.className = "card-footer";
+
+        const sello = document.createElement("div");
+        sello.className = "sello";
+        sello.textContent = "© Parker Brothers / Hasbro — Uso académico";
+        footer.appendChild(sello);
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-aplicar";
+        btn.textContent = "Aplicar efecto a Jugador Demo";
+        btn.addEventListener("click", () => {
+            const dineroEl = document.querySelector("#dinero-demo");
+            const dinero = Number(dineroEl?.textContent ?? "1500");
+            const jugadorDemo = { dinero };
+            const log = this.aplicarA(jugadorDemo);
+            if (dineroEl) dineroEl.textContent = String(jugadorDemo.dinero);
+
+            const logEl = document.querySelector("#log");
+            if (logEl) {
+                const li = document.createElement("li");
+                li.textContent = `[${this.tipo}] ${this.descripcion} (Δ $${this.valor > 0 ? "+" : ""}${this.valor}) → Dinero: $${jugadorDemo.dinero}`;
+                logEl.prepend(li);
+            }
+            console.debug("LOG-CARTA", log);
+        });
+        footer.appendChild(btn);
+
+        root.appendChild(footer);
+        return root;
     }
   }
   
