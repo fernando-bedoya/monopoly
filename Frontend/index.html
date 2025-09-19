@@ -1,23 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Monopoly</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  <link rel="stylesheet" href="views/css/minty.css">
-  <link rel="stylesheet" href="views/css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-    crossorigin="anonymous"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="assets/css/simplex.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </head>
-
 <body>
   <!-- Banner como fondo principal -->
   <img src="assets/img/banner2.png" class="banner-fondo-principal" alt="Banner Monopoly">
 
+  <!-- Navbar -->
   <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Monopoly</a>
@@ -25,7 +21,6 @@
         aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-
       <div class="collapse navbar-collapse" id="navbarColor01">
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
@@ -34,7 +29,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Nuevo Juego</a>
+            <a class="nav-link" href="html/game.html">Nuevo Juego</a>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true"
@@ -52,7 +47,6 @@
             <a class="nav-link disabled" aria-disabled="true">Disabled</a>
           </li>
         </ul>
-
         <form class="d-flex">
           <input class="form-control me-sm-2" type="search" placeholder="Buscar jugadores">
           <button class="btn btn-secondary my-2 my-sm-0" type="submit">Buscar</button>
@@ -61,5 +55,21 @@
     </div>
   </nav>
 
+  <!-- Botón NUEVO JUEGo -->
+  <div class="container text-center mt-5">
+    <a href="views/game.html" class="btn btn-lg btn-success" id="btnNuevoJuego">NUEVO JUEGO</a>
+  </div>
+
+  <!-- Contenedor para modales -->
+  <div id="modales-container"></div>
+
+  <script>
+    // Cargar modales externos
+    fetch('/modals.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('modales-container').innerHTML = html;
+      });
+  </script>
 </body>
 </html>
