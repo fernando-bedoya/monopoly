@@ -1,195 +1,144 @@
-import { 
-    getRanking, 
-    getBoard, 
-    getCountries, 
-    sendScore,
-    getSurpriseCard,
-    getCommunityCard,
-    initializeAPI,
-    formatPlayerData,
-    validateScoreData,
-    getFlagUrl
-} from '../controllers/api.js';
+// player.js (corregido y modular)
+import { fetchCountryInfoByCode, validateCountryCodeService, submitPlayerScoreService } from "../controllers/player.service.js";
+import {
+  normalizeCountries,
+  resolveCountryInfo,
+  isValidCountryCode,
+  getFlagUrl as flagUrlFromUtils,
+  passedGo,
+  calcNetWorth,
+  toScorePayload
+} from "../utils/playerUtils.js";
 
-// ========== CLASE PLAYER (con integración API) ==========
 class Player {
-    constructor(nickname, countryCode, color) {
-        if (!nickname || nickname.trim() === "") {
-            throw new Error("El nickname es requerido");
-        }
-        if (!countryCode || countryCode.length !== 2) {
-            throw new Error("El código de país debe tener 2 caracteres");
-        }
-        if (!color || color.trim() === "") {
-            throw new Error("El color es requerido");
-        }
+  constructor(nickname, countryCode, color) {
+    // Datos básicos
+    this.nickname = String(nickname || "").trim();
+    this.countryCode = String(countryCode || "").trim().toUpperCase();
+    this.color = color || null;
 
-        this.nickname = nickname.trim();
-        this.countryCode = countryCode.toUpperCase();
-        this.color = color.toLowerCase();
-        this.dinero = 1500;
-        this.posicion = 0;
-        this.propiedades = [];
-        this.propiedadesHipotecadas = [];
-        this.casas = 0;
-        this.hoteles = 0;
-        this.estaEnCarcel = false;
-        this.turnosCarcel = 0;
+    // Estado del juego
+    this.dinero = 1500;
+    this.posicion = 0;
+    this.propiedades = [];
+    this.propiedadesHipotecadas = [];
+
+    // Cárcel
+    this.estaEnCarcel = false;
+    this.turnosCarcel = 0;
+
+    // Info país
+    this.countryInfo = null;
+  }
+
+  /** Intenta validar y fijar la info del país llamando al backend */
+  async hydrateCountry() {
+    this.countryInfo = await fetchCountryInfoByCode(this.countryCode);
+    if (!this.countryInfo) {
+      throw new Error(`Código de país inválido: ${this.countryCode}`);
     }
+    return this.countryInfo;
+  }
 
-    // Método estático para validar código de país con la API
-    static async validateCountryCode(countryCode) {
-        try {
-            const countries = await getCountries();
-            const validCountry = countries.find(country => 
-                country.code === countryCode.toUpperCase()
-            );
-            return {
-                isValid: !!validCountry,
-                country: validCountry || null
-            };
-        } catch (error) {
-            console.error('Error validando código de país:', error);
-            return {
-                isValid: false,
-                country: null,
-                error: error.message
-            };
-        }
-    }
+  /** URL de banderita (derivado del code) */
+  getFlagUrl() {
+    return flagUrlFromUtils(this.countryCode);
+  }
 
-    // Método estático para crear un jugador con validación de país
-    static async create(nickname, countryCode, color) {
-        try {
-            // Validar código de país usando la API
-            const countryValidation = await Player.validateCountryCode(countryCode);
-            
-            if (!countryValidation.isValid) {
-                throw new Error(`Código de país inválido: ${countryCode}. ${countryValidation.error || 'País no encontrado en la API'}`);
-            }
+  /** Recibir/Pagar dinero */
+  receiveMoney(amount) {
+    const val = Number(amount) || 0;
+    this.dinero += val;
+    return this.dinero;
+  }
+  payMoney(amount) {
+    const val = Number(amount) || 0;
+    this.dinero -= val;
+    return this.dinero;
+  }
 
-            // Crear el jugador si la validación es exitosa
-            const player = new Player(nickname, countryCode, color);
-            player.countryInfo = countryValidation.country; // Guardar info adicional del país
-            
-            return {
-                success: true,
-                player: player,
-                countryInfo: countryValidation.country
-            };
-        } catch (error) {
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
+  /** Movimiento en el tablero con detección de Salida */
+  move(steps, boardSize = 40) {
+    const { newPos, passed } = passedGo(this.posicion, steps, boardSize);
+    this.posicion = newPos;
+    if (passed) this.receiveMoney(200);
+    return this.posicion;
+  }
 
-    // Método para obtener información del país del jugador
-    async getCountryInfo() {
-        if (this.countryInfo) {
-            return this.countryInfo;
-        }
-        
-        try {
-            const countries = await getCountries();
-            this.countryInfo = countries.find(country => 
-                country.code === this.countryCode
-            );
-            return this.countryInfo;
-        } catch (error) {
-            console.error('Error obteniendo información del país:', error);
-            return null;
-        }
-    }
+  /** Compra de propiedad (simplificado) */
+  buyProperty(property) {
+    if (!property) return false;
+    const price = Number(property.price || 0);
+    if (price > this.dinero) return false;
+    this.payMoney(price);
+    this.propiedades.push({ ...property, houses: property.houses || 0, hotel: property.hotel || false });
+    return true;
+  }
 
-    // Método para enviar puntaje usando la API
-    async submitScore() {
-        try {
-            const scoreData = formatPlayerData(this);
-            const validation = validateScoreData(scoreData.nick_name, scoreData.score, scoreData.country_code);
-            
-            if (!validation.isValid) {
-                throw new Error(`Datos inválidos: ${validation.errors.join(', ')}`);
-            }
-            
-            const result = await sendScore(scoreData.nick_name, scoreData.score, scoreData.country_code);
-            return { success: true, data: result };
-        } catch (error) {
-            console.error('Error enviando puntaje:', error);
-            return { success: false, error: error.message };
-        }
-    }
+  /** Hipotecar / Deshipotecar (helpers simples) */
+  mortgageProperty(propertyId) {
+    const idx = this.propiedades.findIndex(p => p.id === propertyId);
+    if (idx === -1) return false;
+    const p = this.propiedades[idx];
+    if (p.isMortgaged) return false;
+    this.receiveMoney(Number(p.mortgage || 0));
+    p.isMortgaged = true;
+    this.propiedadesHipotecadas.push(p);
+    return true;
+  }
+  unmortgageProperty(propertyId) {
+    const i = this.propiedadesHipotecadas.findIndex(p => p.id === propertyId);
+    if (i === -1) return false;
+    const p = this.propiedadesHipotecadas[i];
+    const cost = Math.ceil(Number(p.mortgage || 0) * 1.10);
+    if (cost > this.dinero) return false;
+    this.payMoney(cost);
+    p.isMortgaged = false;
+    this.propiedadesHipotecadas.splice(i, 1);
+    return true;
+  }
 
-    // Método para obtener bandera del jugador
-    getFlagUrl(size = 32) {
-        return getFlagUrl(this.countryCode, size);
-    }
+  /** Patrimonio total (delegado a utils) */
+  calculateNetWorth() {
+    return calcNetWorth(this);
+  }
 
-    // Resto de métodos de la clase Player...
-    move(steps) {
-        this.posicion = (this.posicion + steps) % 40;
-        if (this.posicion < steps && steps > 0) {
-            this.receiveMoney(200);
-        }
-    }
+  /** Serialización para UI */
+  serialize() {
+    return {
+      nickname: this.nickname,
+      countryCode: this.countryCode,
+      color: this.color,
+      money: this.dinero,
+      position: this.posicion,
+      properties: this.propiedades.length,
+      mortgagedProperties: this.propiedadesHipotecadas.length,
+      isInJail: this.estaEnCarcel,
+      jailTurns: this.turnosCarcel,
+      netWorth: this.calculateNetWorth(),
+      flagUrl: this.getFlagUrl(),
+      countryInfo: this.countryInfo
+    };
+  }
 
-    receiveMoney(amount) {
-        this.dinero += amount;
-    }
+  /** Envío de score al backend */
+  async submitScore() {
+    return await submitPlayerScoreService(this);
+  }
 
-    payMoney(amount) {
-        if (this.dinero >= amount) {
-            this.dinero -= amount;
-            return true;
-        }
-        return false;
-    }
+  // ===== Helpers estáticos =====
 
-    buyProperty(property) {
-        if (this.dinero >= property.price) {
-            this.payMoney(property.price);
-            this.propiedades.push(property);
-            property.owner = this.nickname;
-            return true;
-        }
-        return false;
-    }
+  /** Crea un jugador validando el countryCode contra /countries */
+  static async create(nickname, countryCode, color) {
+    const player = new Player(nickname, countryCode, color);
+    await player.hydrateCountry(); // lanza error si el code no existe
+    return player;
+  }
 
-    calculateNetWorth() {
-        let netWorth = this.dinero;
-        
-        this.propiedades.forEach(property => {
-            if (!property.isMortgaged) {
-                netWorth += property.price;
-                netWorth += (property.houses * 100);
-                netWorth += (property.hotels * 200);
-            }
-        });
-
-        this.propiedadesHipotecadas.forEach(property => {
-            netWorth -= property.mortgage;
-        });
-
-        return netWorth;
-    }
-
-    getPlayerInfo() {
-        return {
-            nickname: this.nickname,
-            countryCode: this.countryCode,
-            color: this.color,
-            money: this.dinero,
-            position: this.posicion,
-            properties: this.propiedades.length,
-            mortgagedProperties: this.propiedadesHipotecadas.length,
-            isInJail: this.estaEnCarcel,
-            jailTurns: this.turnosCarcel,
-            netWorth: this.calculateNetWorth(),
-            flagUrl: this.getFlagUrl(),
-            countryInfo: this.countryInfo
-        };
-    }
+  /** Valida un código de país sin instanciar */
+  static async validateCountryCode(code) {
+    return await validateCountryCodeService(code);
+  }
 }
 
 export { Player };
