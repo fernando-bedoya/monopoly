@@ -1,407 +1,419 @@
 /**
- * Modelo de Casilla del Tablero de Monopoly
- */
-class Square {
-    constructor(data) {
-        this.id = data.id;
-        this.name = data.name;
-        this.type = data.type;
-        this.color = data.color || null;
-        this.price = data.price || 0;
-        this.mortgage = data.mortgage || 0;
-        this.rent = data.rent || null;
-        this.action = data.action || null;
-        
-        // Estados dinámicos de la casilla
-        this.owner = null;
-        this.houses = 0;
-        this.hasHotel = false;
-        this.isMortgaged = false;
-    }
-
-    /**
-     * Verifica si la casilla es una propiedad
-     */
-    isProperty() {
-        return this.type === 'property';
-    }
-
-    /**
-     * Verifica si la casilla es un ferrocarril
-     */
-    isRailroad() {
-        return this.type === 'railroad';
-    }
-
-    /**
-     * Verifica si la casilla es una utilidad (aunque no aparece en el JSON actual)
-     */
-    isUtility() {
-        return this.type === 'utility';
-    }
-
-    /**
-     * Verifica si la casilla es especial (Salida, Cárcel, etc.)
-     */
-    isSpecial() {
-        return this.type === 'special';
-    }
-
-    /**
-     * Verifica si la casilla es de cartas (Sorpresa o Caja de Comunidad)
-     */
-    isCard() {
-        return this.type === 'chance' || this.type === 'community_chest';
-    }
-
-    /**
-     * Verifica si la casilla es de impuestos
-     */
-    isTax() {
-        return this.type === 'tax';
-    }
-
-    /**
-     * Obtiene la renta actual de la propiedad según su estado
-     */
-    getCurrentRent() {
-        if (!this.isProperty() && !this.isRailroad()) return 0;
-        if (this.isMortgaged) return 0;
-
-        if (this.isProperty()) {
-            if (this.hasHotel) {
-                return this.rent.withHotel;
-            } else if (this.houses > 0) {
-                return this.rent.withHouse[this.houses - 1];
-            } else {
-                return this.rent.base;
-            }
-        }
-
-        if (this.isRailroad()) {
-            // La renta del ferrocarril depende de cuántos ferrocarriles tenga el dueño
-            // Esto se calculará en la lógica del juego
-            return this.rent;
-        }
-
-        return 0;
-    }
-
-    /**
-     * Verifica si se puede construir en esta propiedad
-     */
-    canBuild() {
-        return this.isProperty() && 
-               this.owner !== null && 
-               !this.isMortgaged && 
-               !this.hasHotel && 
-               this.houses < 4;
-    }
-
-    /**
-     * Verifica si se puede construir un hotel
-     */
-    canBuildHotel() {
-        return this.isProperty() && 
-               this.owner !== null && 
-               !this.isMortgaged && 
-               this.houses === 4 && 
-               !this.hasHotel;
-    }
-
-    /**
-     * Agrega una casa a la propiedad
-     */
-    addHouse() {
-        if (this.canBuild()) {
-            this.houses++;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Construye un hotel (reemplaza las 4 casas)
-     */
-    buildHotel() {
-        if (this.canBuildHotel()) {
-            this.houses = 0;
-            this.hasHotel = true;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Hipoteca la propiedad
-     */
-    mortgageProperty() {
-        if ((this.isProperty() || this.isRailroad()) && 
-            this.owner !== null && 
-            !this.isMortgaged &&
-            this.houses === 0 && 
-            !this.hasHotel) {
-            this.isMortgaged = true;
-            return this.mortgage;
-        }
-        return 0;
-    }
-
-    /**
-     * Deshipoteca la propiedad (incluye el 10% de interés)
-     */
-    unmortgageProperty() {
-        if (this.isMortgaged) {
-            this.isMortgaged = false;
-            return Math.floor(this.mortgage * 1.1); // 10% de interés
-        }
-        return 0;
-    }
-
-    /**
-     * Obtiene el valor total de la propiedad (para cálculo final)
-     */
-    getTotalValue() {
-        if (!this.isProperty() && !this.isRailroad()) return 0;
-        if (this.isMortgaged) return -this.mortgage; // Deuda por hipoteca
-
-        let value = this.price;
-        
-        if (this.isProperty()) {
-            value += this.houses * 100; // Cada casa vale 100
-            if (this.hasHotel) {
-                value += 200; // Hotel vale 200 adicionales (según PDF)
-            }
-        }
-
-        return value;
-    }
-
-    /**
-     * Resetea la casilla a su estado inicial
-     */
-    reset() {
-        this.owner = null;
-        this.houses = 0;
-        this.hasHotel = false;
-        this.isMortgaged = false;
-    }
-}
-
-/**
- * Modelo del Tablero de Monopoly
+ * Clase Board - Maneja el tablero completo del Monopoly
+ * Gestiona las casillas, cartas y operaciones generales del tablero
  */
 class Board {
     constructor() {
-        this.squares = new Map(); // Mapa de casillas por ID
-        this.squaresByPosition = []; // Array ordenado de casillas por posición
-        this.propertiesByColor = new Map(); // Agrupación por color
-        this.railroads = []; // Lista de ferrocarriles
-        this.specialSquares = new Map(); // Casillas especiales
-        this.cardSquares = []; // Casillas de cartas
-        this.taxSquares = []; // Casillas de impuestos
+        this.casillas = new Map(); // Map para acceso O(1) por ID
+        this.casillasList = []; // Array ordenado para navegación secuencial
+        this.totalCasillas = 0;
+        
+        // Cartas del juego
+        this.communityChestCards = [];
+        this.chanceCards = [];
+        
+        // Índices para barajear cartas
+        this.communityChestIndex = 0;
+        this.chanceIndex = 0;
+        
+        // Configuración del tablero
+        this.boardLayout = {
+            bottom: [],
+            left: [],
+            top: [],
+            right: []
+        };
+        
+        // Grupos de propiedades por color para verificar monopolios
+        this.colorGroups = new Map();
+        
+        // Estadísticas del juego
+        this.gameStats = {
+            totalTransactions: 0,
+            totalRentPaid: 0,
+            propertiesSold: 0,
+            housesBuilt: 0,
+            hotelsBuilt: 0
+        };
     }
 
     /**
-     * Inicializa el tablero con los datos del backend
+     * Inicializa el tablero con datos del backend
+     * @param {Object} boardData - Datos del endpoint /board
      */
-    async initialize() {
+    async initializeBoard(boardData) {
         try {
-            const response = await fetch('http://127.0.0.1:5000/board');
-            const boardData = await response.json();
+            // Limpiar datos anteriores
+            this.reset();
             
-            this.loadSquares(boardData);
-            this.organizeSquares();
+            // Procesar casillas por sección del tablero
+            this.processBoardSection('bottom', boardData.bottom || []);
+            this.processBoardSection('left', boardData.left || []);
+            this.processBoardSection('top', boardData.top || []);
+            this.processBoardSection('right', boardData.right || []);
             
-            return true;
+            // Crear lista ordenada de casillas
+            this.createOrderedList();
+            
+            // Procesar cartas
+            this.communityChestCards = boardData.community_chest || [];
+            this.chanceCards = boardData.chance || [];
+            
+            // Barajear cartas
+            this.shuffleCards();
+            
+            // Crear grupos de colores
+            this.createColorGroups();
+            
+            console.log(`Tablero inicializado: ${this.totalCasillas} casillas`);
+            
         } catch (error) {
-            console.error('Error al cargar el tablero:', error);
-            return false;
+            console.error('Error inicializando tablero:', error);
+            throw new Error('No se pudo inicializar el tablero');
         }
     }
 
     /**
-     * Carga todas las casillas desde los datos del backend
+     * Procesa una sección del tablero (bottom, left, top, right)
+     * @param {string} section - Nombre de la sección
+     * @param {Array} casillasData - Datos de casillas de la sección
      */
-    loadSquares(boardData) {
-        // Cargar casillas de cada lado del tablero
-        const sides = ['bottom', 'left', 'top', 'right'];
-        let position = 0;
-
-        sides.forEach(side => {
-            if (boardData[side]) {
-                boardData[side].forEach(squareData => {
-                    const square = new Square(squareData);
-                    this.squares.set(square.id, square);
-                    this.squaresByPosition[position] = square;
-                    position++;
-                });
-            }
+    processBoardSection(section, casillasData) {
+        this.boardLayout[section] = [];
+        
+        casillasData.forEach(casillaData => {
+            const casilla = new Casilla(casillaData);
+            this.casillas.set(casilla.id, casilla);
+            this.boardLayout[section].push(casilla.id);
+            this.totalCasillas++;
         });
     }
 
     /**
-     * Organiza las casillas por tipo para acceso rápido
+     * Crea la lista ordenada de casillas para navegación secuencial
      */
-    organizeSquares() {
-        this.squares.forEach(square => {
-            // Agrupar propiedades por color
-            if (square.isProperty() && square.color) {
-                if (!this.propertiesByColor.has(square.color)) {
-                    this.propertiesByColor.set(square.color, []);
+    createOrderedList() {
+        this.casillasList = [
+            ...this.boardLayout.bottom,
+            ...this.boardLayout.left,
+            ...this.boardLayout.top,
+            ...this.boardLayout.right.reverse() // Right va en orden inverso
+        ];
+    }
+
+    /**
+     * Crea grupos de propiedades por color
+     */
+    createColorGroups() {
+        this.colorGroups.clear();
+        
+        this.casillas.forEach(casilla => {
+            if (casilla.type === 'property' && casilla.color) {
+                if (!this.colorGroups.has(casilla.color)) {
+                    this.colorGroups.set(casilla.color, []);
                 }
-                this.propertiesByColor.get(square.color).push(square);
-            }
-
-            // Agrupar ferrocarriles
-            if (square.isRailroad()) {
-                this.railroads.push(square);
-            }
-
-            // Casillas especiales
-            if (square.isSpecial()) {
-                this.specialSquares.set(square.name.toLowerCase(), square);
-            }
-
-            // Casillas de cartas
-            if (square.isCard()) {
-                this.cardSquares.push(square);
-            }
-
-            // Casillas de impuestos
-            if (square.isTax()) {
-                this.taxSquares.push(square);
+                this.colorGroups.get(casilla.color).push(casilla.id);
             }
         });
     }
 
     /**
-     * Obtiene una casilla por su ID
+     * Baraja las cartas de comunidad y sorpresa
      */
-    getSquare(id) {
-        return this.squares.get(id);
+    shuffleCards() {
+        this.communityChestCards = this.shuffleArray([...this.communityChestCards]);
+        this.chanceCards = this.shuffleArray([...this.chanceCards]);
+        this.communityChestIndex = 0;
+        this.chanceIndex = 0;
     }
 
     /**
-     * Obtiene una casilla por su posición en el tablero
+     * Algoritmo Fisher-Yates para barajear arrays
+     * @param {Array} array - Array a barajear
+     * @returns {Array} - Array barajeado
      */
-    getSquareByPosition(position) {
-        return this.squaresByPosition[position % this.getTotalSquares()];
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
     /**
-     * Obtiene el número total de casillas
+     * Obtiene una casilla por ID
+     * @param {number} id - ID de la casilla
+     * @returns {Casilla|null}
      */
-    getTotalSquares() {
-        return this.squaresByPosition.length;
+    getCasilla(id) {
+        return this.casillas.get(id) || null;
     }
 
     /**
-     * Obtiene todas las propiedades de un color específico
+     * Calcula la nueva posición después de avanzar
+     * @param {number} currentPosition - Posición actual
+     * @param {number} steps - Pasos a avanzar
+     * @returns {Object} - {newPosition, passedGo}
      */
-    getPropertiesByColor(color) {
-        return this.propertiesByColor.get(color) || [];
+    calculateNewPosition(currentPosition, steps) {
+        const currentIndex = this.casillasList.indexOf(currentPosition);
+        if (currentIndex === -1) {
+            throw new Error(`Posición actual inválida: ${currentPosition}`);
+        }
+        
+        const newIndex = (currentIndex + steps) % this.totalCasillas;
+        const newPosition = this.casillasList[newIndex];
+        const passedGo = (currentIndex + steps) >= this.totalCasillas;
+        
+        return { newPosition, passedGo };
     }
 
     /**
-     * Verifica si un jugador tiene el monopolio de un color
+     * Mueve un jugador en el tablero
+     * @param {string|number} playerId - ID del jugador
+     * @param {number} fromPosition - Posición actual
+     * @param {number} toPosition - Nueva posición
+     */
+    movePlayer(playerId, fromPosition, toPosition) {
+        // Remover jugador de la posición anterior
+        if (fromPosition !== null) {
+            const fromCasilla = this.getCasilla(fromPosition);
+            if (fromCasilla) {
+                fromCasilla.removePlayer(playerId);
+            }
+        }
+        
+        // Agregar jugador a la nueva posición
+        const toCasilla = this.getCasilla(toPosition);
+        if (toCasilla) {
+            toCasilla.addPlayer(playerId);
+        }
+    }
+
+    /**
+     * Verifica si un jugador tiene monopolio de un color
+     * @param {string|number} playerId - ID del jugador
+     * @param {string} color - Color a verificar
+     * @returns {boolean}
      */
     hasMonopoly(playerId, color) {
-        const properties = this.getPropertiesByColor(color);
-        return properties.length > 0 && 
-               properties.every(property => property.owner === playerId);
-    }
-
-    /**
-     * Obtiene todos los ferrocarriles de un jugador
-     */
-    getPlayerRailroads(playerId) {
-        return this.railroads.filter(railroad => railroad.owner === playerId);
-    }
-
-    /**
-     * Obtiene la renta de un ferrocarril según cuántos tenga el dueño
-     */
-    getRailroadRent(railroadId, playerId) {
-        const railroad = this.getSquare(railroadId);
-        if (!railroad || !railroad.isRailroad() || railroad.owner !== playerId) {
-            return 0;
-        }
-
-        const playerRailroads = this.getPlayerRailroads(playerId);
-        const count = playerRailroads.length;
+        const colorGroup = this.colorGroups.get(color);
+        if (!colorGroup) return false;
         
-        return railroad.rent[count.toString()] || 0;
+        return colorGroup.every(casillaId => {
+            const casilla = this.getCasilla(casillaId);
+            return casilla && casilla.owner === playerId;
+        });
     }
 
     /**
-     * Calcula el valor total de las propiedades de un jugador
+     * Cuenta cuántos ferrocarriles posee un jugador
+     * @param {string|number} playerId - ID del jugador
+     * @returns {number}
      */
-    getPlayerTotalValue(playerId) {
-        let total = 0;
-        
-        this.squares.forEach(square => {
-            if (square.owner === playerId) {
-                total += square.getTotalValue();
+    countPlayerRailroads(playerId) {
+        let count = 0;
+        this.casillas.forEach(casilla => {
+            if (casilla.type === 'railroad' && casilla.owner === playerId) {
+                count++;
             }
         });
-
-        return total;
+        return count;
     }
 
     /**
-     * Obtiene todas las propiedades de un jugador
+     * Obtiene las propiedades de un jugador
+     * @param {string|number} playerId - ID del jugador
+     * @returns {Array<Casilla>}
      */
     getPlayerProperties(playerId) {
         const properties = [];
-        
-        this.squares.forEach(square => {
-            if (square.owner === playerId && 
-                (square.isProperty() || square.isRailroad())) {
-                properties.push(square);
+        this.casillas.forEach(casilla => {
+            if ((casilla.type === 'property' || casilla.type === 'railroad') && 
+                casilla.owner === playerId) {
+                properties.push(casilla);
             }
         });
-
         return properties;
     }
 
     /**
-     * Verifica si una propiedad puede ser construida (tiene monopolio)
+     * Verifica si un jugador puede construir en una propiedad
+     * @param {string|number} playerId - ID del jugador
+     * @param {number} casillaId - ID de la casilla
+     * @returns {boolean}
      */
-    canBuildOnProperty(propertyId, playerId) {
-        const property = this.getSquare(propertyId);
-        if (!property || !property.isProperty() || property.owner !== playerId) {
-            return false;
-        }
-
-        return this.hasMonopoly(playerId, property.color) && property.canBuild();
+    canPlayerBuild(playerId, casillaId) {
+        const casilla = this.getCasilla(casillaId);
+        if (!casilla || casilla.owner !== playerId) return false;
+        
+        // Solo se puede construir en propiedades
+        if (casilla.type !== 'property') return false;
+        
+        // Debe tener monopolio del color
+        if (!this.hasMonopoly(playerId, casilla.color)) return false;
+        
+        return casilla.canBuild() || casilla.canBuildHotel();
     }
 
     /**
-     * Resetea el tablero a su estado inicial
+     * Obtiene una carta de comunidad
+     * @returns {Object|null}
      */
-    reset() {
-        this.squares.forEach(square => square.reset());
+    drawCommunityChestCard() {
+        if (this.communityChestCards.length === 0) return null;
+        
+        const card = this.communityChestCards[this.communityChestIndex];
+        this.communityChestIndex = (this.communityChestIndex + 1) % this.communityChestCards.length;
+        
+        return card;
     }
 
     /**
-     * Obtiene información del tablero para renderizado
+     * Obtiene una carta de sorpresa
+     * @returns {Object|null}
      */
-    getBoardLayout() {
+    drawChanceCard() {
+        if (this.chanceCards.length === 0) return null;
+        
+        const card = this.chanceCards[this.chanceIndex];
+        this.chanceIndex = (this.chanceIndex + 1) % this.chanceCards.length;
+        
+        return card;
+    }
+
+    /**
+     * Calcula el patrimonio total de un jugador
+     * @param {string|number} playerId - ID del jugador
+     * @param {number} playerMoney - Dinero del jugador
+     * @returns {number}
+     */
+    calculatePlayerNetWorth(playerId, playerMoney) {
+        let netWorth = playerMoney;
+        
+        this.casillas.forEach(casilla => {
+            if (casilla.owner === playerId) {
+                netWorth += casilla.getTotalValue();
+            }
+        });
+        
+        return netWorth;
+    }
+
+    /**
+     * Obtiene estadísticas del juego
+     * @returns {Object}
+     */
+    getGameStats() {
+        let ownedProperties = 0;
+        let mortgagedProperties = 0;
+        let totalHouses = 0;
+        let totalHotels = 0;
+        
+        this.casillas.forEach(casilla => {
+            if (casilla.owner) {
+                ownedProperties++;
+                if (casilla.mortgaged) mortgagedProperties++;
+                if (casilla.type === 'property') {
+                    totalHouses += casilla.houses;
+                    if (casilla.hotel) totalHotels++;
+                }
+            }
+        });
+        
         return {
-            totalSquares: this.getTotalSquares(),
-            squares: Array.from(this.squares.values()),
-            squaresByPosition: this.squaresByPosition,
-            propertiesByColor: Object.fromEntries(this.propertiesByColor),
-            railroads: this.railroads,
-            specialSquares: Object.fromEntries(this.specialSquares)
+            ...this.gameStats,
+            ownedProperties,
+            mortgagedProperties,
+            totalHouses,
+            totalHotels,
+            availableProperties: this.totalCasillas - ownedProperties
         };
     }
-}
 
-// Exportar las clases para uso en otros archivos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Square, Board };
-} else if (typeof window !== 'undefined') {
-    window.MonopolyBoard = { Square, Board };
+    /**
+     * Obtiene información para renderizar el tablero
+     * @returns {Object}
+     */
+    getBoardDisplayData() {
+        const displayData = {
+            bottom: [],
+            left: [],
+            top: [],
+            right: []
+        };
+        
+        Object.keys(this.boardLayout).forEach(section => {
+            displayData[section] = this.boardLayout[section].map(casillaId => {
+                const casilla = this.getCasilla(casillaId);
+                return casilla ? casilla.getDisplayInfo() : null;
+            }).filter(info => info !== null);
+        });
+        
+        return displayData;
+    }
+
+    /**
+     * Actualiza estadísticas del juego
+     * @param {string} stat - Tipo de estadística
+     * @param {number} value - Valor a sumar (opcional)
+     */
+    updateStats(stat, value = 1) {
+        if (this.gameStats.hasOwnProperty(stat)) {
+            this.gameStats[stat] += value;
+        }
+    }
+
+    /**
+     * Resetea el tablero para una nueva partida
+     */
+    reset() {
+        this.casillas.clear();
+        this.casillasList = [];
+        this.totalCasillas = 0;
+        this.boardLayout = { bottom: [], left: [], top: [], right: [] };
+        this.colorGroups.clear();
+        this.communityChestCards = [];
+        this.chanceCards = [];
+        this.communityChestIndex = 0;
+        this.chanceIndex = 0;
+        this.gameStats = {
+            totalTransactions: 0,
+            totalRentPaid: 0,
+            propertiesSold: 0,
+            housesBuilt: 0,
+            hotelsBuilt: 0
+        };
+    }
+
+    /**
+     * Obtiene información completa del tablero (para debugging)
+     * @returns {Object}
+     */
+    getFullBoardInfo() {
+        return {
+            totalCasillas: this.totalCasillas,
+            colorGroups: Object.fromEntries(this.colorGroups),
+            communityChestCardsCount: this.communityChestCards.length,
+            chanceCardsCount: this.chanceCards.length,
+            stats: this.getGameStats(),
+            casillas: Array.from(this.casillas.values()).map(c => c.getFullInfo())
+        };
+    }
+
+    /**
+     * Valida la integridad del tablero
+     * @returns {boolean}
+     */
+    validateBoard() {
+        // Verificar que todas las casillas estén conectadas
+        if (this.casillasList.length !== this.totalCasillas) return false;
+        
+        // Verificar que no haya IDs duplicados
+        const ids = new Set(this.casillasList);
+        if (ids.size !== this.totalCasillas) return false;
+        
+        // Verificar que todas las casillas existan
+        return this.casillasList.every(id => this.casillas.has(id));
+    }
 }
