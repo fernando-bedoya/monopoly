@@ -672,3 +672,6 @@ class BoardRenderer {
         this.casillaElements.clear();
     }
 }
+
+// Exportar para uso global
+window.BoardRenderer = BoardRenderer;

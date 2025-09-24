@@ -417,3 +417,8 @@ class Board {
         return this.casillasList.every(id => this.casillas.has(id));
     }
 }
+
+// Exportar la clase para uso global
+window.MonopolyBoard = {
+    Board: Board
+};

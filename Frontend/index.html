@@ -3,73 +3,341 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monopoly</title>
+  <title>Monopoly - Juego Online</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  <link rel="stylesheet" href="assets/css/simplex.css">
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="views/css/minty.css">
+  <link rel="stylesheet" href="views/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  <style>
+    /* Estilos personalizados para la página de inicio */
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      min-height: 100vh;
+      font-family: 'Open Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .hero-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .game-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 4rem;
+      color: #fff;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+      margin-bottom: 1rem;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.2); }
+      to { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3), 0 0 30px rgba(255, 255, 255, 0.4); }
+    }
+
+    .game-description {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .game-description h3 {
+      color: #2c3e50;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .game-description p {
+      color: #34495e;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .btn-nuevo-juego {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 700;
+      padding: 1rem 3rem;
+      border-radius: 50px;
+      box-shadow: 0 10px 30px rgba(238, 90, 36, 0.3);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-nuevo-juego:hover {
+      background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(238, 90, 36, 0.4);
+      color: white;
+    }
+
+    .btn-nuevo-juego:active {
+      transform: translateY(-1px);
+    }
+
+    .creators-section {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .creators-section h4 {
+      color: #2c3e50;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .creator-name {
+      color: #3498db;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .floating-shapes {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1;
+    }
+
+    .shape {
+      position: absolute;
+      opacity: 0.1;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape1 {
+      top: 10%;
+      left: 10%;
+      width: 80px;
+      height: 80px;
+      background: #ff6b6b;
+      border-radius: 50%;
+      animation-delay: 0s;
+    }
+
+    .shape2 {
+      top: 20%;
+      right: 15%;
+      width: 60px;
+      height: 60px;
+      background: #4ecdc4;
+      transform: rotate(45deg);
+      animation-delay: 2s;
+    }
+
+    .shape3 {
+      bottom: 20%;
+      left: 20%;
+      width: 100px;
+      height: 100px;
+      background: #ffe66d;
+      border-radius: 20px;
+      animation-delay: 4s;
+    }
+
+    .shape4 {
+      bottom: 30%;
+      right: 10%;
+      width: 70px;
+      height: 70px;
+      background: #a8e6cf;
+      border-radius: 50%;
+      animation-delay: 1s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    @media (max-width: 768px) {
+      .game-title {
+        font-size: 2.5rem;
+        text-align: center;
+      }
+
+      .game-description {
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+
+      .btn-nuevo-juego {
+        font-size: 1.2rem;
+        padding: 0.8rem 2rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- Banner como fondo principal -->
-  <img src="assets/img/banner2.png" class="banner-fondo-principal" alt="Banner Monopoly">
-
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Monopoly</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
-        aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarColor01">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <a class="nav-link active" href="#">Inicio
-              <span class="visually-hidden">(current)</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="html/game.html">Nuevo Juego</a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true"
-              aria-expanded="false">
-              Jugadores
-            </a>
-            <div class="dropdown-menu">
-              <a class="dropdown-item" href="#">Ranking</a>
-              <a class="dropdown-item" href="#">Another action</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="#">Something else here</a>
-            </div>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-          </li>
-        </ul>
-        <form class="d-flex">
-          <input class="form-control me-sm-2" type="search" placeholder="Buscar jugadores">
-          <button class="btn btn-secondary my-2 my-sm-0" type="submit">Buscar</button>
-        </form>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Botón NUEVO JUEGo -->
-  <div class="container text-center mt-5">
-    <a href="views/game.html" class="btn btn-lg btn-success" id="btnNuevoJuego">NUEVO JUEGO</a>
+  <!-- Formas flotantes para decoración -->
+  <div class="floating-shapes">
+    <div class="shape shape1"></div>
+    <div class="shape shape2"></div>
+    <div class="shape shape3"></div>
+    <div class="shape shape4"></div>
   </div>
 
-  <!-- Contenedor para modales -->
-  <div id="modales-container"></div>
+  <!-- Sección principal del héroe -->
+  <div class="hero-section">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10 text-center">
+          
+          <!-- Título principal -->
+          <h1 class="game-title">🎲 MONOPOLY 🏠</h1>
+          
+          <!-- Descripción del juego -->
+          <div class="game-description">
+            <h3>🌟 ¡Bienvenido al Monopoly Online! 🌟</h3>
+            <p>
+              Sumérgete en la experiencia clásica del juego de mesa más famoso del mundo. 
+              Compra propiedades, construye casas y hoteles, y conviértete en el magnate 
+              inmobiliario más exitoso. ¡Compite contra tus amigos en tiempo real y 
+              demuestra quién tiene la mejor estrategia financiera!
+            </p>
+            <p>
+              <strong>🎯 Características:</strong> Multijugador online, tablero interactivo, 
+              sistema de cartas dinámico, y una experiencia de juego completamente renovada.
+            </p>
+          </div>
 
-  <script>
-    // Cargar modales externos
-    fetch('/modals.html')
-      .then(res => res.text())
-      .then(html => {
-        document.getElementById('modales-container').innerHTML = html;
+          <!-- Botón principal -->
+          <div class="mb-4">
+            <button class="btn btn-nuevo-juego" id="btnNuevoJuego">
+              🚀 ¡Comenzar Aventura!
+            </button>
+          </div>
+
+          <!-- Sección de creadores -->
+          <div class="creators-section">
+            <h4>👨‍💻 Desarrollado por:</h4>
+            <div class="row">
+              <div class="col-md-4 mb-2">
+                <div class="creator-name">David Fernando Bedoya Ramírez</div>
+              </div>
+              <div class="col-md-4 mb-2">
+                <div class="creator-name">Luz Alejandra López Cuayal</div>
+              </div>
+              <div class="col-md-4 mb-2">
+                <div class="creator-name">Cristhian Andrey Zambrano Cerón</div>
+              </div>
+            </div>
+            <small class="text-muted">Universidad de Caldas - Desarrollo Frontend</small>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="modales-container"></div>
+<script>
+  fetch('views/modals.html')
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('modales-container').innerHTML = html;
+
+      // Mostrar el primer modal al hacer clic en NUEVO JUEGO
+      document.getElementById('btnNuevoJuego').addEventListener('click', () => {
+        const modalJugadores = new bootstrap.Modal(document.getElementById('modalJugadores'));
+        modalJugadores.show();
       });
-  </script>
+
+      // Al hacer clic en "Siguiente", mostrar el segundo modal y generar los campos
+      document.getElementById('btnSiguiente').addEventListener('click', () => {
+        const num = document.getElementById('numJugadores').value;
+        generarCamposNicknames(num);
+
+        const modalJugadores = bootstrap.Modal.getInstance(document.getElementById('modalJugadores'));
+        modalJugadores.hide();
+
+        const modalDatos = new bootstrap.Modal(document.getElementById('modalDatosJugadores'));
+        modalDatos.show();
+      });
+
+      // Función para generar campos de nickname, país, color y ficha
+      function generarCamposNicknames(num) {
+        const container = document.getElementById('nicknamesContainer');
+        container.innerHTML = '';
+        const colores = ['Rojo', 'Azul', 'Verde', 'Amarillo'];
+        const fichas = ['Auto', 'Sombrero', 'Barco', 'Perro'];
+        const paises = [
+          {codigo: 'CO', nombre: 'Colombia', bandera: '🇨🇴'},
+          {codigo: 'MX', nombre: 'México', bandera: '🇲🇽'},
+          {codigo: 'ES', nombre: 'España', bandera: '🇪🇸'},
+          {codigo: 'AR', nombre: 'Argentina', bandera: '🇦🇷'}
+        ];
+        for (let i = 1; i <= num; i++) {
+          container.innerHTML += `
+            <div class="mb-2 border rounded p-2">
+              <label for="nickname${i}" class="form-label">Nickname Jugador ${i}</label>
+              <input type="text" class="form-control mb-2" id="nickname${i}" placeholder="Jugador ${i}" required>
+              <label for="pais${i}" class="form-label">País</label>
+              <select class="form-select mb-2" id="pais${i}">
+                ${paises.map(p => `<option value="${p.codigo}">${p.bandera} ${p.nombre}</option>`).join('')}
+              </select>
+              <label for="color${i}" class="form-label">Color de ficha</label>
+              <select class="form-select mb-2" id="color${i}">
+                ${colores.map(c => `<option value="${c}">${c}</option>`).join('')}
+              </select>
+              <label for="ficha${i}" class="form-label">Tipo de ficha</label>
+              <select class="form-select" id="ficha${i}">
+                ${fichas.map(f => `<option value="${f}">${f}</option>`).join('')}
+              </select>
+            </div>
+          `;
+        }
+      }
+
+      // Manejar el botón "Iniciar Juego" del segundo modal
+      document.getElementById('btnIniciar').addEventListener('click', () => {
+        // Recoger los datos de los jugadores
+        const numJugadores = document.getElementById('numJugadores').value;
+        const jugadores = [];
+        
+        for (let i = 1; i <= numJugadores; i++) {
+          const jugador = {
+            nickname: document.getElementById(`nickname${i}`).value || `Jugador ${i}`,
+            pais: document.getElementById(`pais${i}`).value,
+            color: document.getElementById(`color${i}`).value,
+            ficha: document.getElementById(`ficha${i}`).value
+          };
+          jugadores.push(jugador);
+        }
+        
+        // Guardar los datos en localStorage para usarlos en el juego
+        localStorage.setItem('jugadores', JSON.stringify(jugadores));
+        localStorage.setItem('numJugadores', numJugadores);
+        
+        // Cerrar el modal
+        const modalDatos = bootstrap.Modal.getInstance(document.getElementById('modalDatosJugadores'));
+        modalDatos.hide();
+        
+        // Redirigir al tablero del juego
+        window.location.href = 'views/game.html';
+      });
+    });
+</script>
+
 </body>
 </html>

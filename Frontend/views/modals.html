@@ -1,32 +1,30 @@
-<!-- modales.html: Todos los modales del juego Monopoly -->
-<!-- Modal Selección de Jugadores -->
+<!-- Modal 1: Selección de número de jugadores -->
 <div class="modal fade" id="modalJugadores" tabindex="-1" aria-labelledby="modalJugadoresLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalJugadoresLabel">¿Cuántos jugadores jugarán?</h5>
+        <h5 class="modal-title" id="modalJugadoresLabel">Selecciona el número de jugadores</h5>
       </div>
       <div class="modal-body">
-        <form id="formJugadores">
+        <form id="formNumJugadores">
           <div class="mb-3">
-            <label for="numJugadores" class="form-label">Seleccione entre 2 y 4 jugadores:</label>
-            <select class="form-select" id="numJugadores" required>
-              <option value="" selected disabled>Elige una opción</option>
-              <option value="2">2 jugadores</option>
-              <option value="3">3 jugadores</option>
-              <option value="4">4 jugadores</option>
+            <label for="numJugadores" class="form-label">Número de jugadores</label>
+            <select class="form-select" id="numJugadores">
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
             </select>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success" id="btnIniciar">Iniciar Juego</button>
+        <button type="button" class="btn btn-primary" id="btnSiguiente">Siguiente</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal Datos de Jugadores -->
+<!-- Modal 2: Datos de cada jugador -->
 <div class="modal fade" id="modalDatosJugadores" tabindex="-1" aria-labelledby="modalDatosJugadoresLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -34,12 +32,14 @@
         <h5 class="modal-title" id="modalDatosJugadoresLabel">Datos de Jugadores</h5>
       </div>
       <div class="modal-body">
-        <form id="formDatosJugadores" class="row g-3">
-          <!-- Aquí se generarán dinámicamente los inputs -->
+        <form id="formJugadores">
+          <div id="nicknamesContainer">
+            <!-- Aquí se generan los campos dinámicamente -->
+          </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success" id="btnConfirmarJugadores">Confirmar</button>
+        <button type="button" class="btn btn-success" id="btnIniciar">Iniciar Juego</button>
       </div>
     </div>
   </div>

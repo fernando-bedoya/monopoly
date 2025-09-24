@@ -399,4 +399,232 @@ class BoardUtils {
             }
         };
     }
+
+    /**
+     * Genera datos de prueba para el tablero
+     * @param {number} totalCasillas - Número total de casillas
+     * @param {string} language - Idioma ('es' o 'en')
+     * @returns {Object} Datos del tablero con estructura {bottom, left, top, right, community_chest, chance}
+     */
+    static generateTestBoardData(totalCasillas = 40, language = 'es') {
+        if (!this.isValidCasillaCount(totalCasillas)) {
+            throw new Error(`Número de casillas inválido: ${totalCasillas}`);
+        }
+
+        const distribution = this.calculateSectionDistribution(totalCasillas);
+        const corners = this.calculateCornerPositions(totalCasillas);
+        const colors = this.generatePropertyColors(Math.floor(totalCasillas * 0.6)); // 60% propiedades aprox
+
+        // Nombres base según idioma
+        const names = language === 'es' ? {
+            go: 'Salida',
+            jail: 'Cárcel',
+            freeParking: 'Estacionamiento Gratuito', 
+            goToJail: 'Ir a la Cárcel',
+            chance: 'Suerte',
+            communityChest: 'Caja de Comunidad',
+            property: 'Propiedad',
+            railroad: 'Ferrocarril',
+            utility: 'Servicio Público',
+            tax: 'Impuesto'
+        } : {
+            go: 'GO',
+            jail: 'Jail',
+            freeParking: 'Free Parking',
+            goToJail: 'Go to Jail',
+            chance: 'Chance',
+            communityChest: 'Community Chest',
+            property: 'Property',
+            railroad: 'Railroad',
+            utility: 'Utility',
+            tax: 'Tax'
+        };
+
+        const boardData = {
+            bottom: [],
+            left: [],
+            top: [],
+            right: [],
+            community_chest: this.generateCommunityChestCards(language),
+            chance: this.generateChanceCards(language)
+        };
+
+        // Generar casillas por sección
+        const sections = ['bottom', 'left', 'top', 'right'];
+        let position = 0;
+        let colorIndex = 0;
+
+        sections.forEach((section, sectionIndex) => {
+            const casillasInSection = distribution[section];
+            
+            for (let i = 0; i < casillasInSection; i++) {
+                const isCorner = corners.includes(position);
+                let casilla;
+
+                if (isCorner) {
+                    // Casillas especiales en las esquinas
+                    if (position === 0) {
+                        casilla = this.createSpecialCasilla(position, names.go, 'go', language);
+                    } else if (position === corners[1]) {
+                        casilla = this.createSpecialCasilla(position, names.jail, 'jail', language);
+                    } else if (position === corners[2]) {
+                        casilla = this.createSpecialCasilla(position, names.freeParking, 'free_parking', language);
+                    } else if (position === corners[3]) {
+                        casilla = this.createSpecialCasilla(position, names.goToJail, 'go_to_jail', language);
+                    }
+                } else {
+                    // Casillas regulares - mix de propiedades y especiales
+                    const rand = Math.random();
+                    if (rand < 0.65) { // 65% propiedades
+                        casilla = this.createPropertyCasilla(position, `${names.property} ${position}`, colors[colorIndex % colors.length], language);
+                        colorIndex++;
+                    } else if (rand < 0.75) { // 10% chance/community chest
+                        casilla = this.createSpecialCasilla(position, Math.random() < 0.5 ? names.chance : names.communityChest, 
+                                                         Math.random() < 0.5 ? 'chance' : 'community_chest', language);
+                    } else if (rand < 0.85) { // 10% ferrocarriles
+                        casilla = this.createRailroadCasilla(position, `${names.railroad} ${Math.floor(position/10) + 1}`, language);
+                    } else if (rand < 0.95) { // 10% servicios públicos
+                        casilla = this.createUtilityCasilla(position, `${names.utility} ${Math.floor(position/20) + 1}`, language);
+                    } else { // 5% impuestos
+                        casilla = this.createTaxCasilla(position, `${names.tax} ${Math.floor(position/10) + 1}`, language);
+                    }
+                }
+
+                boardData[section].push(casilla);
+                position++;
+            }
+        });
+
+        return boardData;
+    }
+
+    /**
+     * Crea una casilla especial (GO, Jail, etc.)
+     */
+    static createSpecialCasilla(position, name, type, language) {
+        return {
+            id: `special_${position}`,
+            name: name,
+            type: type,
+            position: position,
+            description: language === 'es' ? `Casilla especial: ${name}` : `Special square: ${name}`,
+            action: type
+        };
+    }
+
+    /**
+     * Crea una casilla de propiedad
+     */
+    static createPropertyCasilla(position, name, color, language) {
+        const basePrice = 100 + (position * 5);
+        return {
+            id: `property_${position}`,
+            name: name,
+            type: 'property',
+            position: position,
+            color: color,
+            price: basePrice,
+            rent: Math.floor(basePrice * 0.1),
+            house_cost: Math.floor(basePrice * 0.5),
+            hotel_cost: Math.floor(basePrice * 0.5),
+            mortgage_value: Math.floor(basePrice * 0.5),
+            houses: 0,
+            hotels: 0,
+            owner: null,
+            mortgaged: false,
+            description: language === 'es' ? `Propiedad en venta por $${basePrice}` : `Property for sale for $${basePrice}`
+        };
+    }
+
+    /**
+     * Crea una casilla de ferrocarril
+     */
+    static createRailroadCasilla(position, name, language) {
+        return {
+            id: `railroad_${position}`,
+            name: name,
+            type: 'railroad',
+            position: position,
+            price: 200,
+            rent: [25, 50, 100, 200],
+            mortgage_value: 100,
+            owner: null,
+            mortgaged: false,
+            description: language === 'es' ? 'Estación de ferrocarril' : 'Railroad station'
+        };
+    }
+
+    /**
+     * Crea una casilla de servicio público
+     */
+    static createUtilityCasilla(position, name, language) {
+        return {
+            id: `utility_${position}`,
+            name: name,
+            type: 'utility',
+            position: position,
+            price: 150,
+            mortgage_value: 75,
+            owner: null,
+            mortgaged: false,
+            description: language === 'es' ? 'Empresa de servicios públicos' : 'Utility company'
+        };
+    }
+
+    /**
+     * Crea una casilla de impuesto
+     */
+    static createTaxCasilla(position, name, language) {
+        return {
+            id: `tax_${position}`,
+            name: name,
+            type: 'tax',
+            position: position,
+            amount: 100 + (position * 2),
+            description: language === 'es' ? 'Pagar impuesto' : 'Pay tax'
+        };
+    }
+
+    /**
+     * Genera cartas de Caja de Comunidad
+     */
+    static generateCommunityChestCards(language = 'es') {
+        const cards = language === 'es' ? [
+            { text: 'Avanza hasta la Salida. Cobra $200', action: 'move_to', destination: 0, money: 200 },
+            { text: 'Recibe $50', action: 'receive_money', amount: 50 },
+            { text: 'Paga $100 de multa', action: 'pay_money', amount: 100 },
+            { text: 'Ve a la cárcel directamente', action: 'go_to_jail' },
+            { text: 'Sal de la cárcel gratis', action: 'get_out_of_jail_free' }
+        ] : [
+            { text: 'Advance to GO. Collect $200', action: 'move_to', destination: 0, money: 200 },
+            { text: 'Bank pays you $50', action: 'receive_money', amount: 50 },
+            { text: 'Pay $100 fine', action: 'pay_money', amount: 100 },
+            { text: 'Go to Jail directly', action: 'go_to_jail' },
+            { text: 'Get out of Jail free', action: 'get_out_of_jail_free' }
+        ];
+        return cards;
+    }
+
+    /**
+     * Genera cartas de Suerte
+     */
+    static generateChanceCards(language = 'es') {
+        const cards = language === 'es' ? [
+            { text: 'Avanza hasta la Salida. Cobra $200', action: 'move_to', destination: 0, money: 200 },
+            { text: 'Avanza 3 espacios', action: 'move_spaces', spaces: 3 },
+            { text: 'Retrocede 3 espacios', action: 'move_spaces', spaces: -3 },
+            { text: 'Paga $50', action: 'pay_money', amount: 50 },
+            { text: 'Recibe $100', action: 'receive_money', amount: 100 }
+        ] : [
+            { text: 'Advance to GO. Collect $200', action: 'move_to', destination: 0, money: 200 },
+            { text: 'Move forward 3 spaces', action: 'move_spaces', spaces: 3 },
+            { text: 'Move back 3 spaces', action: 'move_spaces', spaces: -3 },
+            { text: 'Pay $50', action: 'pay_money', amount: 50 },
+            { text: 'Bank pays you $100', action: 'receive_money', amount: 100 }
+        ];
+        return cards;
+    }
 }
+
+// Exportar para uso global
+window.BoardUtils = BoardUtils;
