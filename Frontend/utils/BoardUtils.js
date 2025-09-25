@@ -1,497 +1,233 @@
-/**
- * BoardUtils - Utilidades para el manejo y generación del tablero de Monopoly
- * Funciones auxiliares que se pueden reutilizar en diferentes partes del juego
- */
 class BoardUtils {
     /**
-     * Configuración por defecto del tablero
+     * Calcula la distribución de casillas por lado del tablero
      */
-    static DEFAULT_CONFIG = {
-        minCasillas: 20,
-        maxCasillas: 40,
-        defaultCasillas: 40,
-        sectionsOrder: ['bottom', 'left', 'top', 'right'],
-        cornerPositions: [0, 10, 20, 30], // Para tablero de 40 casillas
-        playerColors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'],
-        boardDimensions: {
-            width: 800,
-            height: 800,
-            casillaWidth: 80,
-            casillaHeight: 100
-        }
-    };
-
-    /**
-     * Valida si el número de casillas es válido para generar un tablero
-     * @param {number} totalCasillas - Número total de casillas
-     * @returns {boolean}
-     */
-    static isValidCasillaCount(totalCasillas) {
-        return Number.isInteger(totalCasillas) && 
-               totalCasillas >= this.DEFAULT_CONFIG.minCasillas &&
-               totalCasillas <= this.DEFAULT_CONFIG.maxCasillas &&
-               totalCasillas % 4 === 0; // Debe ser divisible por 4 para 4 lados
-    }
-
-    /**
-     * Calcula la distribución de casillas por sección del tablero
-     * @param {number} totalCasillas - Número total de casillas
-     * @returns {Object} Distribución por sección
-     */
-    static calculateSectionDistribution(totalCasillas) {
-        if (!this.isValidCasillaCount(totalCasillas)) {
-            throw new Error(`Número de casillas inválido: ${totalCasillas}. Debe ser múltiplo de 4 entre ${this.DEFAULT_CONFIG.minCasillas} y ${this.DEFAULT_CONFIG.maxCasillas}`);
+    static calculateSquareDistribution(totalSquares) {
+        if (totalSquares < 4) {
+            throw new Error('El tablero debe tener al menos 4 casillas (esquinas)');
         }
 
-        const casillasPerSide = totalCasillas / 4;
+        const perSide = Math.floor(totalSquares / 4);
+        const remainder = totalSquares % 4;
         
         return {
-            bottom: casillasPerSide,
-            left: casillasPerSide,
-            top: casillasPerSide,
-            right: casillasPerSide,
-            total: totalCasillas
+            bottom: perSide + (remainder > 0 ? 1 : 0),
+            left: perSide + (remainder > 1 ? 1 : 0),
+            top: perSide + (remainder > 2 ? 1 : 0),
+            right: perSide,
+            total: totalSquares
         };
     }
 
     /**
-     * Genera las posiciones de las esquinas basado en el total de casillas
-     * @param {number} totalCasillas - Número total de casillas
-     * @returns {Array<number>} Array con las posiciones de las esquinas
+     * Obtiene plantillas de casillas según el idioma
      */
-    static calculateCornerPositions(totalCasillas) {
-        const casillasPerSide = totalCasillas / 4;
-        return [
-            0,                          // Esquina inferior derecha (GO)
-            casillasPerSide,           // Esquina inferior izquierda
-            casillasPerSide * 2,       // Esquina superior izquierda
-            casillasPerSide * 3        // Esquina superior derecha
-        ];
-    }
-
-    /**
-     * Determina el tipo de casilla especial basado en su posición
-     * @param {number} position - Posición en el tablero (0-based)
-     * @param {number} totalCasillas - Total de casillas del tablero
-     * @returns {string|null} Tipo de casilla especial o null si es propiedad normal
-     */
-    static getSpecialCasillaType(position, totalCasillas) {
-        const corners = this.calculateCornerPositions(totalCasillas);
-        const casillasPerSide = totalCasillas / 4;
-        
-        // Esquinas especiales
-        if (corners.includes(position)) {
-            switch (position) {
-                case 0: return 'go';
-                case casillasPerSide: return 'jail';
-                case casillasPerSide * 2: return 'free_parking';
-                case casillasPerSide * 3: return 'go_to_jail';
-            }
-        }
-        
-        // Otras casillas especiales basadas en posición relativa
-        const relativePosition = position % casillasPerSide;
-        
-        // Community Chest cada 7 casillas aproximadamente
-        if (relativePosition === Math.floor(casillasPerSide * 0.2) || 
-            relativePosition === Math.floor(casillasPerSide * 0.8)) {
-            return 'community_chest';
-        }
-        
-        // Chance cada 6 casillas aproximadamente
-        if (relativePosition === Math.floor(casillasPerSide * 0.4) || 
-            relativePosition === Math.floor(casillasPerSide * 0.6)) {
-            return 'chance';
-        }
-        
-        // Impuestos
-        if (relativePosition === Math.floor(casillasPerSide * 0.1)) {
-            return 'tax';
-        }
-        
-        // Ferrocarriles
-        if (relativePosition === Math.floor(casillasPerSide * 0.5)) {
-            return 'railroad';
-        }
-        
-        // Servicios públicos
-        if (relativePosition === Math.floor(casillasPerSide * 0.3) || 
-            relativePosition === Math.floor(casillasPerSide * 0.7)) {
-            return 'utility';
-        }
-        
-        return 'property'; // Propiedad normal por defecto
-    }
-
-    /**
-     * Genera colores para grupos de propiedades
-     * @param {number} totalProperties - Número total de propiedades normales
-     * @returns {Array<string>} Array de colores
-     */
-    static generatePropertyColors(totalProperties) {
-        const baseColors = [
-            '#8B4513', '#87CEEB', '#FF1493', '#FFA500', 
-            '#FF0000', '#FFFF00', '#00FF00', '#0000FF',
-            '#4B0082', '#800080'
-        ];
-        
-        const colorsNeeded = Math.ceil(totalProperties / 3); // 3 propiedades por color típicamente
-        const colors = [];
-        
-        for (let i = 0; i < colorsNeeded; i++) {
-            colors.push(baseColors[i % baseColors.length]);
-        }
-        
-        return colors;
-    }
-
-    /**
-     * Calcula la sección del tablero donde debe ir una casilla
-     * @param {number} position - Posición de la casilla (0-based)
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {string} Nombre de la sección ('bottom', 'left', 'top', 'right')
-     */
-    static getSectionForPosition(position, totalCasillas) {
-        const casillasPerSide = totalCasillas / 4;
-        
-        if (position < casillasPerSide) return 'bottom';
-        if (position < casillasPerSide * 2) return 'left';
-        if (position < casillasPerSide * 3) return 'top';
-        return 'right';
-    }
-
-    /**
-     * Calcula las dimensiones del tablero basado en el número de casillas
-     * @param {number} totalCasillas - Número total de casillas
-     * @returns {Object} Dimensiones calculadas
-     */
-    static calculateBoardDimensions(totalCasillas) {
-        const casillasPerSide = totalCasillas / 4;
-        const baseSize = this.DEFAULT_CONFIG.boardDimensions;
-        
-        // Ajustar tamaño según número de casillas
-        const scaleFactor = Math.max(0.6, Math.min(1.2, casillasPerSide / 10));
-        
-        return {
-            width: baseSize.width * scaleFactor,
-            height: baseSize.height * scaleFactor,
-            casillaWidth: Math.max(60, baseSize.casillaWidth * (10 / casillasPerSide)),
-            casillaHeight: Math.max(80, baseSize.casillaHeight * (10 / casillasPerSide))
-        };
-    }
-
-    /**
-     * Valida la estructura de datos del tablero recibida del backend
-     * @param {Object} boardData - Datos del tablero
-     * @returns {boolean}
-     */
-    static validateBoardData(boardData) {
-        if (!boardData || typeof boardData !== 'object') return false;
-        
-        const requiredSections = ['bottom', 'left', 'top', 'right'];
-        
-        // Verificar que todas las secciones existen
-        for (const section of requiredSections) {
-            if (!Array.isArray(boardData[section])) return false;
-        }
-        
-        // Verificar que hay al menos una casilla en cada sección
-        const totalCasillas = requiredSections.reduce((total, section) => 
-            total + boardData[section].length, 0);
-            
-        return totalCasillas >= this.DEFAULT_CONFIG.minCasillas;
-    }
-
-    /**
-     * Sanitiza y normaliza los datos de una casilla
-     * @param {Object} casillaData - Datos raw de la casilla
-     * @param {number} position - Posición en el tablero
-     * @returns {Object} Datos normalizados
-     */
-    static sanitizeCasillaData(casillaData, position) {
-        const sanitized = {
-            id: casillaData.id || position,
-            name: casillaData.name || `Casilla ${position}`,
-            type: casillaData.type || 'property',
-            position: position
-        };
-
-        // Sanitizar propiedades específicas según el tipo
-        switch (sanitized.type) {
-            case 'property':
-                sanitized.color = casillaData.color || '#CCCCCC';
-                sanitized.price = Math.max(0, casillaData.price || 100);
-                sanitized.mortgage = Math.max(0, casillaData.mortgage || sanitized.price / 2);
-                sanitized.rent = this.sanitizeRentData(casillaData.rent);
-                break;
-                
-            case 'railroad':
-                sanitized.price = Math.max(0, casillaData.price || 200);
-                sanitized.mortgage = Math.max(0, casillaData.mortgage || sanitized.price / 2);
-                sanitized.rent = this.sanitizeRailroadRent(casillaData.rent);
-                break;
-                
-            case 'tax':
-                sanitized.action = {
-                    type: 'pay',
-                    amount: Math.max(0, casillaData.action?.amount || 100)
-                };
-                break;
-        }
-
-        return sanitized;
-    }
-
-    /**
-     * Sanitiza los datos de renta para propiedades
-     * @param {Object} rentData - Datos de renta
-     * @returns {Object} Datos de renta sanitizados
-     */
-    static sanitizeRentData(rentData) {
-        if (!rentData || typeof rentData !== 'object') {
-            return {
-                base: 10,
-                withHouse: [50, 150, 450, 625],
-                withHotel: 750
-            };
-        }
-
-        return {
-            base: Math.max(0, rentData.base || 10),
-            withHouse: Array.isArray(rentData.withHouse) ? 
-                rentData.withHouse.map(rent => Math.max(0, rent)) :
-                [50, 150, 450, 625],
-            withHotel: Math.max(0, rentData.withHotel || 750)
-        };
-    }
-
-    /**
-     * Sanitiza los datos de renta para ferrocarriles
-     * @param {Object} rentData - Datos de renta
-     * @returns {Object} Datos de renta sanitizados
-     */
-    static sanitizeRailroadRent(rentData) {
-        if (!rentData || typeof rentData !== 'object') {
-            return { '1': 25, '2': 50, '3': 100, '4': 200 };
-        }
-
-        return {
-            '1': Math.max(0, rentData['1'] || 25),
-            '2': Math.max(0, rentData['2'] || 50),
-            '3': Math.max(0, rentData['3'] || 100),
-            '4': Math.max(0, rentData['4'] || 200)
-        };
-    }
-
-    /**
-     * Genera un ID único para una casilla
-     * @param {string} section - Sección del tablero
-     * @param {number} index - Índice dentro de la sección
-     * @param {number} position - Posición global
-     * @returns {string}
-     */
-    static generateCasillaId(section, index, position) {
-        return `casilla_${section}_${index}_${position}`;
-    }
-
-    /**
-     * Convierte una posición global a coordenadas de sección
-     * @param {number} position - Posición global (0-based)
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {Object} {section, index}
-     */
-    static positionToSectionCoords(position, totalCasillas) {
-        const casillasPerSide = totalCasillas / 4;
-        
-        if (position < casillasPerSide) {
-            return { section: 'bottom', index: position };
-        } else if (position < casillasPerSide * 2) {
-            return { section: 'left', index: position - casillasPerSide };
-        } else if (position < casillasPerSide * 3) {
-            return { section: 'top', index: position - (casillasPerSide * 2) };
-        } else {
-            return { section: 'right', index: position - (casillasPerSide * 3) };
-        }
-    }
-
-    /**
-     * Convierte coordenadas de sección a posición global
-     * @param {string} section - Sección del tablero
-     * @param {number} index - Índice dentro de la sección
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {number} Posición global
-     */
-    static sectionCoordsToPosition(section, index, totalCasillas) {
-        const casillasPerSide = totalCasillas / 4;
-        
-        switch (section) {
-            case 'bottom': return index;
-            case 'left': return casillasPerSide + index;
-            case 'top': return casillasPerSide * 2 + index;
-            case 'right': return casillasPerSide * 3 + index;
-            default: throw new Error(`Sección inválida: ${section}`);
-        }
-    }
-
-    /**
-     * Genera un color de jugador aleatorio que no esté en uso
-     * @param {Array<string>} usedColors - Colores ya utilizados
-     * @returns {string} Color hexadecimal
-     */
-    static generatePlayerColor(usedColors = []) {
-        const availableColors = this.DEFAULT_CONFIG.playerColors.filter(
-            color => !usedColors.includes(color)
-        );
-        
-        if (availableColors.length === 0) {
-            // Generar color aleatorio si no hay disponibles
-            return '#' + Math.floor(Math.random()*16777215).toString(16);
-        }
-        
-        return availableColors[0];
-    }
-
-    /**
-     * Calcula la distancia entre dos posiciones en el tablero
-     * @param {number} from - Posición inicial
-     * @param {number} to - Posición final
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {number} Distancia (puede ser negativa si va hacia atrás)
-     */
-    static calculateDistance(from, to, totalCasillas) {
-        if (to >= from) {
-            return to - from;
-        } else {
-            // El jugador pasó por GO
-            return (totalCasillas - from) + to;
-        }
-    }
-
-    /**
-     * Verifica si una posición es una esquina del tablero
-     * @param {number} position - Posición a verificar
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {boolean}
-     */
-    static isCornerPosition(position, totalCasillas) {
-        const corners = this.calculateCornerPositions(totalCasillas);
-        return corners.includes(position);
-    }
-
-    /**
-     * Obtiene información de debug para el tablero
-     * @param {number} totalCasillas - Total de casillas
-     * @returns {Object}
-     */
-    static getDebugInfo(totalCasillas) {
-        return {
-            isValidCount: this.isValidCasillaCount(totalCasillas),
-            distribution: this.calculateSectionDistribution(totalCasillas),
-            corners: this.calculateCornerPositions(totalCasillas),
-            dimensions: this.calculateBoardDimensions(totalCasillas),
-            specialPositions: {
-                corners: this.calculateCornerPositions(totalCasillas),
-                communityChest: [],
-                chance: [],
-                tax: [],
-                railroads: [],
-                utilities: []
+    static getSquareTemplates(language = 'es') {
+        const templates = {
+            es: {
+                corners: [
+                    { name: "Salida", type: "special", action: { money: 200 } },
+                    { name: "Cárcel / Solo de visita", type: "special" },
+                    { name: "Parqueo Gratis", type: "special" },
+                    { name: "Ve a la Cárcel", type: "special", action: { goTo: "jail" } }
+                ],
+                properties: [
+                    // Grupo marrón
+                    { name: "Avenida Mediterráneo", color: "brown", price: 60, mortgage: 30, rent: { base: 2, withHouse: [10, 30, 90, 160], withHotel: 250 } },
+                    { name: "Avenida Báltica", color: "brown", price: 60, mortgage: 30, rent: { base: 4, withHouse: [20, 60, 180, 320], withHotel: 450 } },
+                    // Grupo púrpura
+                    { name: "Avenida Oriental", color: "purple", price: 100, mortgage: 50, rent: { base: 6, withHouse: [30, 90, 270, 400], withHotel: 550 } },
+                    { name: "Avenida Vermont", color: "purple", price: 100, mortgage: 50, rent: { base: 6, withHouse: [30, 90, 270, 400], withHotel: 550 } },
+                    { name: "Avenida Connecticut", color: "purple", price: 120, mortgage: 60, rent: { base: 8, withHouse: [40, 100, 300, 450], withHotel: 600 } },
+                    // Grupo rosado
+                    { name: "Plaza St. Charles", color: "pink", price: 140, mortgage: 70, rent: { base: 10, withHouse: [50, 150, 450, 625], withHotel: 750 } },
+                    { name: "Avenida States", color: "pink", price: 140, mortgage: 70, rent: { base: 10, withHouse: [50, 150, 450, 625], withHotel: 750 } },
+                    { name: "Avenida Virginia", color: "pink", price: 160, mortgage: 80, rent: { base: 12, withHouse: [60, 180, 500, 700], withHotel: 900 } },
+                    // Grupo naranja
+                    { name: "Plaza St. James", color: "orange", price: 180, mortgage: 90, rent: { base: 14, withHouse: [70, 200, 550, 750], withHotel: 950 } },
+                    { name: "Avenida Tennessee", color: "orange", price: 180, mortgage: 90, rent: { base: 14, withHouse: [70, 200, 550, 750], withHotel: 950 } },
+                    { name: "Avenida Nueva York", color: "orange", price: 200, mortgage: 100, rent: { base: 16, withHouse: [80, 220, 600, 800], withHotel: 1000 } },
+                    // Grupo rojo
+                    { name: "Avenida Kentucky", color: "red", price: 220, mortgage: 110, rent: { base: 18, withHouse: [90, 250, 700, 875], withHotel: 1050 } },
+                    { name: "Avenida Indiana", color: "red", price: 220, mortgage: 110, rent: { base: 18, withHouse: [90, 250, 700, 875], withHotel: 1050 } },
+                    { name: "Avenida Illinois", color: "red", price: 240, mortgage: 120, rent: { base: 20, withHouse: [100, 300, 750, 925], withHotel: 1100 } },
+                    // Grupo amarillo
+                    { name: "Avenida Atlántico", color: "yellow", price: 260, mortgage: 130, rent: { base: 22, withHouse: [110, 330, 800, 975], withHotel: 1150 } },
+                    { name: "Avenida Ventnor", color: "yellow", price: 260, mortgage: 130, rent: { base: 22, withHouse: [110, 330, 800, 975], withHotel: 1150 } },
+                    { name: "Jardines Marvin", color: "yellow", price: 280, mortgage: 140, rent: { base: 24, withHouse: [120, 360, 850, 1025], withHotel: 1200 } },
+                    // Grupo verde
+                    { name: "Avenida Pacífico", color: "green", price: 300, mortgage: 150, rent: { base: 26, withHouse: [130, 390, 900, 1100], withHotel: 1275 } },
+                    { name: "Avenida Carolina del Norte", color: "green", price: 300, mortgage: 150, rent: { base: 26, withHouse: [130, 390, 900, 1100], withHotel: 1275 } },
+                    { name: "Avenida Pensilvania", color: "green", price: 320, mortgage: 160, rent: { base: 28, withHouse: [150, 450, 1000, 1200], withHotel: 1400 } },
+                    // Grupo azul
+                    { name: "Avenida Parque", color: "blue", price: 350, mortgage: 175, rent: { base: 35, withHouse: [175, 500, 1100, 1300], withHotel: 1500 } },
+                    { name: "Paseo del Parque", color: "blue", price: 400, mortgage: 200, rent: { base: 50, withHouse: [200, 600, 1400, 1700], withHotel: 2000 } }
+                ],
+                railroads: [
+                    { name: "Ferrocarril Reading", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "Ferrocarril Pennsylvania", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "Ferrocarril B&O", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "Ferrocarril Short Line", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } }
+                ],
+                taxes: [
+                    { name: "Impuesto sobre ingresos", type: "tax", action: { money: -200 } },
+                    { name: "Impuesto Electricidad", type: "tax", action: { money: -50 } },
+                    { name: "Impuesto Agua", type: "tax", action: { money: -50 } },
+                    { name: "Impuesto de lujo", type: "tax", action: { money: -100 } }
+                ],
+                cards: [
+                    { name: "Caja de Comunidad", type: "community_chest" },
+                    { name: "Sorpresa", type: "chance" }
+                ]
+            },
+            en: {
+                corners: [
+                    { name: "GO", type: "special", action: { money: 200 } },
+                    { name: "Jail / Just Visiting", type: "special" },
+                    { name: "Free Parking", type: "special" },
+                    { name: "Go to Jail", type: "special", action: { goTo: "jail" } }
+                ],
+                properties: [
+                    { name: "Mediterranean Avenue", color: "brown", price: 60, mortgage: 30, rent: { base: 2, withHouse: [10, 30, 90, 160], withHotel: 250 } },
+                    { name: "Baltic Avenue", color: "brown", price: 60, mortgage: 30, rent: { base: 4, withHouse: [20, 60, 180, 320], withHotel: 450 } },
+                    { name: "Oriental Avenue", color: "purple", price: 100, mortgage: 50, rent: { base: 6, withHouse: [30, 90, 270, 400], withHotel: 550 } },
+                    { name: "Vermont Avenue", color: "purple", price: 100, mortgage: 50, rent: { base: 6, withHouse: [30, 90, 270, 400], withHotel: 550 } },
+                    { name: "Connecticut Avenue", color: "purple", price: 120, mortgage: 60, rent: { base: 8, withHouse: [40, 100, 300, 450], withHotel: 600 } }
+                ],
+                railroads: [
+                    { name: "Reading Railroad", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "Pennsylvania Railroad", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "B&O Railroad", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                    { name: "Short Line", price: 200, mortgage: 100, rent: { "1": 25, "2": 50, "3": 100, "4": 200 } }
+                ],
+                taxes: [
+                    { name: "Income Tax", type: "tax", action: { money: -200 } },
+                    { name: "Electric Company", type: "tax", action: { money: -50 } },
+                    { name: "Water Works", type: "tax", action: { money: -50 } },
+                    { name: "Luxury Tax", type: "tax", action: { money: -100 } }
+                ],
+                cards: [
+                    { name: "Community Chest", type: "community_chest" },
+                    { name: "Chance", type: "chance" }
+                ]
             }
         };
+
+        return templates[language] || templates.es;
     }
 
     /**
-     * Genera datos de prueba para el tablero
-     * @param {number} totalCasillas - Número total de casillas
-     * @param {string} language - Idioma ('es' o 'en')
-     * @returns {Object} Datos del tablero con estructura {bottom, left, top, right, community_chest, chance}
+     * Genera datos de prueba para el tablero con el número especificado de casillas
      */
-    static generateTestBoardData(totalCasillas = 40, language = 'es') {
-        if (!this.isValidCasillaCount(totalCasillas)) {
-            throw new Error(`Número de casillas inválido: ${totalCasillas}`);
-        }
-
-        const distribution = this.calculateSectionDistribution(totalCasillas);
-        const corners = this.calculateCornerPositions(totalCasillas);
-        const colors = this.generatePropertyColors(Math.floor(totalCasillas * 0.6)); // 60% propiedades aprox
-
-        // Nombres base según idioma
-        const names = language === 'es' ? {
-            go: 'Salida',
-            jail: 'Cárcel',
-            freeParking: 'Estacionamiento Gratuito', 
-            goToJail: 'Ir a la Cárcel',
-            chance: 'Suerte',
-            communityChest: 'Caja de Comunidad',
-            property: 'Propiedad',
-            railroad: 'Ferrocarril',
-            utility: 'Servicio Público',
-            tax: 'Impuesto'
-        } : {
-            go: 'GO',
-            jail: 'Jail',
-            freeParking: 'Free Parking',
-            goToJail: 'Go to Jail',
-            chance: 'Chance',
-            communityChest: 'Community Chest',
-            property: 'Property',
-            railroad: 'Railroad',
-            utility: 'Utility',
-            tax: 'Tax'
-        };
-
+    static generateTestBoardData(totalSquares, language = 'es') {
+        const distribution = this.calculateSquareDistribution(totalSquares);
         const boardData = {
             bottom: [],
             left: [],
             top: [],
-            right: [],
-            community_chest: this.generateCommunityChestCards(language),
-            chance: this.generateChanceCards(language)
+            right: []
         };
 
-        // Generar casillas por sección
-        const sections = ['bottom', 'left', 'top', 'right'];
-        let position = 0;
-        let colorIndex = 0;
+        const templates = this.getSquareTemplates(language);
+        let squareId = 0;
 
-        sections.forEach((section, sectionIndex) => {
-            const casillasInSection = distribution[section];
+        // Índices para las plantillas
+        let propertyIndex = 0;
+        let railroadIndex = 0;
+        let taxIndex = 0;
+        let cardIndex = 0;
+
+        // Generar casillas para cada lado
+        Object.keys(distribution).forEach(side => {
+            if (side === 'total') return;
             
-            for (let i = 0; i < casillasInSection; i++) {
-                const isCorner = corners.includes(position);
-                let casilla;
+            const sideCount = distribution[side];
+            for (let i = 0; i < sideCount; i++) {
+                const isCorner = (side === 'bottom' && i === 0) ||
+                               (side === 'left' && i === 0) ||
+                               (side === 'top' && i === 0) ||
+                               (side === 'right' && i === 0);
+
+                let square;
 
                 if (isCorner) {
-                    // Casillas especiales en las esquinas
-                    if (position === 0) {
-                        casilla = this.createSpecialCasilla(position, names.go, 'go', language);
-                    } else if (position === corners[1]) {
-                        casilla = this.createSpecialCasilla(position, names.jail, 'jail', language);
-                    } else if (position === corners[2]) {
-                        casilla = this.createSpecialCasilla(position, names.freeParking, 'free_parking', language);
-                    } else if (position === corners[3]) {
-                        casilla = this.createSpecialCasilla(position, names.goToJail, 'go_to_jail', language);
-                    }
+                    // Asignar esquinas específicas
+                    let cornerIndex;
+                    if (side === 'bottom' && i === 0) cornerIndex = 0; // Salida
+                    else if (side === 'left' && i === 0) cornerIndex = 1; // Cárcel
+                    else if (side === 'top' && i === 0) cornerIndex = 2; // Parqueo Gratis
+                    else if (side === 'right' && i === 0) cornerIndex = 3; // Ve a la Cárcel
+
+                    square = {
+                        id: squareId,
+                        ...templates.corners[cornerIndex]
+                    };
                 } else {
-                    // Casillas regulares - mix de propiedades y especiales
-                    const rand = Math.random();
-                    if (rand < 0.65) { // 65% propiedades
-                        casilla = this.createPropertyCasilla(position, `${names.property} ${position}`, colors[colorIndex % colors.length], language);
-                        colorIndex++;
-                    } else if (rand < 0.75) { // 10% chance/community chest
-                        casilla = this.createSpecialCasilla(position, Math.random() < 0.5 ? names.chance : names.communityChest, 
-                                                         Math.random() < 0.5 ? 'chance' : 'community_chest', language);
-                    } else if (rand < 0.85) { // 10% ferrocarriles
-                        casilla = this.createRailroadCasilla(position, `${names.railroad} ${Math.floor(position/10) + 1}`, language);
-                    } else if (rand < 0.95) { // 10% servicios públicos
-                        casilla = this.createUtilityCasilla(position, `${names.utility} ${Math.floor(position/20) + 1}`, language);
-                    } else { // 5% impuestos
-                        casilla = this.createTaxCasilla(position, `${names.tax} ${Math.floor(position/10) + 1}`, language);
+                    // Determinar tipo de casilla basado en posición y disponibilidad
+                    const squareType = this.determineSquareType(squareId, totalSquares, i, sideCount);
+                    
+                    switch (squareType) {
+                        case 'property':
+                            if (propertyIndex < templates.properties.length) {
+                                square = {
+                                    id: squareId,
+                                    type: 'property',
+                                    ...templates.properties[propertyIndex]
+                                };
+                                propertyIndex++;
+                            } else {
+                                // Generar propiedad aleatoria si se agotan las plantillas
+                                square = this.generateRandomProperty(squareId, language);
+                            }
+                            break;
+
+                        case 'railroad':
+                            if (railroadIndex < templates.railroads.length) {
+                                square = {
+                                    id: squareId,
+                                    type: 'railroad',
+                                    ...templates.railroads[railroadIndex]
+                                };
+                                railroadIndex++;
+                            } else {
+                                square = this.generateRandomRailroad(squareId, railroadIndex, language);
+                                railroadIndex++;
+                            }
+                            break;
+
+                        case 'tax':
+                            if (taxIndex < templates.taxes.length) {
+                                square = {
+                                    id: squareId,
+                                    ...templates.taxes[taxIndex]
+                                };
+                                taxIndex++;
+                            } else {
+                                square = this.generateRandomTax(squareId, language);
+                            }
+                            break;
+
+                        case 'card':
+                            const cardTemplate = templates.cards[cardIndex % templates.cards.length];
+                            square = {
+                                id: squareId,
+                                ...cardTemplate
+                            };
+                            cardIndex++;
+                            break;
+
+                        default:
+                            // Casilla por defecto
+                            square = {
+                                id: squareId,
+                                name: `Casilla ${squareId}`,
+                                type: 'special'
+                            };
                     }
                 }
 
-                boardData[section].push(casilla);
-                position++;
+                boardData[side].push(square);
+                squareId++;
             }
         });
 
@@ -499,132 +235,168 @@ class BoardUtils {
     }
 
     /**
-     * Crea una casilla especial (GO, Jail, etc.)
+     * Determina el tipo de casilla basado en su posición
      */
-    static createSpecialCasilla(position, name, type, language) {
-        return {
-            id: `special_${position}`,
-            name: name,
-            type: type,
-            position: position,
-            description: language === 'es' ? `Casilla especial: ${name}` : `Special square: ${name}`,
-            action: type
+    static determineSquareType(squareId, totalSquares, positionInSide, sideCount) {
+        // Patrón básico para distribución de tipos
+        const patterns = {
+            small: ['property', 'card', 'property', 'tax'], // Para tableros pequeños
+            medium: ['property', 'property', 'card', 'property', 'railroad', 'property', 'tax'], // Tableros medianos
+            large: ['property', 'property', 'card', 'property', 'property', 'railroad', 'property', 'card', 'property', 'tax'] // Tableros grandes
         };
+
+        let pattern;
+        if (totalSquares <= 16) pattern = patterns.small;
+        else if (totalSquares <= 32) pattern = patterns.medium;
+        else pattern = patterns.large;
+
+        return pattern[squareId % pattern.length];
     }
 
     /**
-     * Crea una casilla de propiedad
+     * Genera una propiedad aleatoria
      */
-    static createPropertyCasilla(position, name, color, language) {
-        const basePrice = 100 + (position * 5);
+    static generateRandomProperty(id, language) {
+        const colors = ['brown', 'purple', 'pink', 'orange', 'red', 'yellow', 'green', 'blue'];
+        const color = colors[id % colors.length];
+        const basePrice = 100 + (id * 20);
+
+        const names = {
+            es: [`Avenida Test ${id}`, `Calle Prueba ${id}`, `Plaza Virtual ${id}`],
+            en: [`Test Avenue ${id}`, `Sample Street ${id}`, `Virtual Plaza ${id}`]
+        };
+
         return {
-            id: `property_${position}`,
-            name: name,
+            id: id,
+            name: names[language] ? names[language][id % 3] : names.es[id % 3],
             type: 'property',
-            position: position,
             color: color,
             price: basePrice,
-            rent: Math.floor(basePrice * 0.1),
-            house_cost: Math.floor(basePrice * 0.5),
-            hotel_cost: Math.floor(basePrice * 0.5),
-            mortgage_value: Math.floor(basePrice * 0.5),
-            houses: 0,
-            hotels: 0,
-            owner: null,
-            mortgaged: false,
-            description: language === 'es' ? `Propiedad en venta por $${basePrice}` : `Property for sale for $${basePrice}`
+            mortgage: Math.floor(basePrice / 2),
+            rent: {
+                base: Math.floor(basePrice * 0.1),
+                withHouse: [
+                    Math.floor(basePrice * 0.3),
+                    Math.floor(basePrice * 0.9),
+                    Math.floor(basePrice * 2.7),
+                    Math.floor(basePrice * 4.0)
+                ],
+                withHotel: Math.floor(basePrice * 5.5)
+            }
         };
     }
 
     /**
-     * Crea una casilla de ferrocarril
+     * Genera un ferrocarril aleatorio
      */
-    static createRailroadCasilla(position, name, language) {
+    static generateRandomRailroad(id, index, language) {
+        const names = {
+            es: [`Ferrocarril Norte ${index + 1}`, `Ferrocarril Sur ${index + 1}`, `Ferrocarril Este ${index + 1}`, `Ferrocarril Oeste ${index + 1}`],
+            en: [`North Railroad ${index + 1}`, `South Railroad ${index + 1}`, `East Railroad ${index + 1}`, `West Railroad ${index + 1}`]
+        };
+
         return {
-            id: `railroad_${position}`,
-            name: name,
+            id: id,
+            name: names[language] ? names[language][index % 4] : names.es[index % 4],
             type: 'railroad',
-            position: position,
             price: 200,
-            rent: [25, 50, 100, 200],
-            mortgage_value: 100,
-            owner: null,
-            mortgaged: false,
-            description: language === 'es' ? 'Estación de ferrocarril' : 'Railroad station'
+            mortgage: 100,
+            rent: {
+                "1": 25,
+                "2": 50,
+                "3": 100,
+                "4": 200
+            }
         };
     }
 
     /**
-     * Crea una casilla de servicio público
+     * Genera un impuesto aleatorio
      */
-    static createUtilityCasilla(position, name, language) {
-        return {
-            id: `utility_${position}`,
-            name: name,
-            type: 'utility',
-            position: position,
-            price: 150,
-            mortgage_value: 75,
-            owner: null,
-            mortgaged: false,
-            description: language === 'es' ? 'Empresa de servicios públicos' : 'Utility company'
+    static generateRandomTax(id, language) {
+        const taxes = {
+            es: [
+                { name: "Impuesto Municipal", money: -100 },
+                { name: "Impuesto Predial", money: -75 },
+                { name: "Impuesto Vehicular", money: -50 },
+                { name: "Impuesto de Renta", money: -150 }
+            ],
+            en: [
+                { name: "Municipal Tax", money: -100 },
+                { name: "Property Tax", money: -75 },
+                { name: "Vehicle Tax", money: -50 },
+                { name: "Income Tax", money: -150 }
+            ]
         };
-    }
 
-    /**
-     * Crea una casilla de impuesto
-     */
-    static createTaxCasilla(position, name, language) {
+        const taxList = taxes[language] || taxes.es;
+        const selectedTax = taxList[id % taxList.length];
+
         return {
-            id: `tax_${position}`,
-            name: name,
+            id: id,
+            name: selectedTax.name,
             type: 'tax',
-            position: position,
-            amount: 100 + (position * 2),
-            description: language === 'es' ? 'Pagar impuesto' : 'Pay tax'
+            action: {
+                money: selectedTax.money
+            }
         };
     }
 
     /**
-     * Genera cartas de Caja de Comunidad
+     * Valida la estructura del tablero generado
      */
-    static generateCommunityChestCards(language = 'es') {
-        const cards = language === 'es' ? [
-            { text: 'Avanza hasta la Salida. Cobra $200', action: 'move_to', destination: 0, money: 200 },
-            { text: 'Recibe $50', action: 'receive_money', amount: 50 },
-            { text: 'Paga $100 de multa', action: 'pay_money', amount: 100 },
-            { text: 'Ve a la cárcel directamente', action: 'go_to_jail' },
-            { text: 'Sal de la cárcel gratis', action: 'get_out_of_jail_free' }
-        ] : [
-            { text: 'Advance to GO. Collect $200', action: 'move_to', destination: 0, money: 200 },
-            { text: 'Bank pays you $50', action: 'receive_money', amount: 50 },
-            { text: 'Pay $100 fine', action: 'pay_money', amount: 100 },
-            { text: 'Go to Jail directly', action: 'go_to_jail' },
-            { text: 'Get out of Jail free', action: 'get_out_of_jail_free' }
-        ];
-        return cards;
-    }
+    static validateBoardData(boardData) {
+        const sides = ['bottom', 'left', 'top', 'right'];
+        let totalSquares = 0;
+        let hasCorners = 0;
 
-    /**
-     * Genera cartas de Suerte
-     */
-    static generateChanceCards(language = 'es') {
-        const cards = language === 'es' ? [
-            { text: 'Avanza hasta la Salida. Cobra $200', action: 'move_to', destination: 0, money: 200 },
-            { text: 'Avanza 3 espacios', action: 'move_spaces', spaces: 3 },
-            { text: 'Retrocede 3 espacios', action: 'move_spaces', spaces: -3 },
-            { text: 'Paga $50', action: 'pay_money', amount: 50 },
-            { text: 'Recibe $100', action: 'receive_money', amount: 100 }
-        ] : [
-            { text: 'Advance to GO. Collect $200', action: 'move_to', destination: 0, money: 200 },
-            { text: 'Move forward 3 spaces', action: 'move_spaces', spaces: 3 },
-            { text: 'Move back 3 spaces', action: 'move_spaces', spaces: -3 },
-            { text: 'Pay $50', action: 'pay_money', amount: 50 },
-            { text: 'Bank pays you $100', action: 'receive_money', amount: 100 }
-        ];
-        return cards;
+        for (const side of sides) {
+            if (!Array.isArray(boardData[side])) {
+                return { valid: false, error: `Lado ${side} no es un array` };
+            }
+
+            totalSquares += boardData[side].length;
+
+            // Verificar que el primer elemento de cada lado sea una esquina
+            if (boardData[side].length > 0 && boardData[side][0].type === 'special') {
+                hasCorners++;
+            }
+        }
+
+        if (hasCorners !== 4) {
+            return { valid: false, error: 'Faltan esquinas en el tablero' };
+        }
+
+        if (totalSquares < 4) {
+            return { valid: false, error: 'El tablero debe tener al menos 4 casillas' };
+        }
+
+        return { valid: true, totalSquares };
     }
 }
 
-// Exportar para uso global
-window.BoardUtils = BoardUtils;
+// Ejemplo de uso:
+/*
+// Generar tablero de prueba de 40 casillas
+const testBoard = BoardUtils.generateTestBoardData(40, 'es');
+console.log('Tablero generado:', testBoard);
+
+// Validar el tablero
+const validation = BoardUtils.validateBoardData(testBoard);
+if (validation.valid) {
+    console.log(`Tablero válido con ${validation.totalSquares} casillas`);
+} else {
+    console.error('Error en el tablero:', validation.error);
+}
+
+// Generar tablero más pequeño
+const smallBoard = BoardUtils.generateTestBoardData(12, 'en');
+console.log('Tablero pequeño:', smallBoard);
+*/
+
+// Exportar para uso en otros módulos
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = BoardUtils;
+} else if (typeof window !== 'undefined') {
+    window.BoardUtils = BoardUtils;
+}
