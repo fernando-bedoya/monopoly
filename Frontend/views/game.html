@@ -7,6 +7,8 @@
     <title>Prueba Tablero Monopoly</title>
     <link rel="stylesheet" href="/views/css/style.css">
     <link rel="stylesheet" href="/views/css/cartas.css">
+    <link rel="stylesheet" href="/views/css/dice.css">
+
 
 </head>
 
@@ -88,14 +90,13 @@
         </footer>
     </div>
 
-    <!-- Recuadro simple para dados -->
-    <div id="diceBox" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-         background: white; border: 2px solid #007bff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
-        <div id="diceContent">
-            <!-- El contenido se agregará dinámicamente -->
-        </div>
-        
-    </div>
+   <!-- Recuadro simple para dados -->
+<div id="diceBox">
+  <div id="diceContent">
+      <!-- El contenido se agregará dinámicamente -->
+  </div>
+</div>
+
 
     <!-- Scripts -->
         <script type="module" src="../models/Game.js"></script>
