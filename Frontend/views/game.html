@@ -1,34 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prueba Tablero Monopoly</title>
     <link rel="stylesheet" href="/views/css/style.css">
 </head>
+
 <body>
-    <!-- game.html: Menú lateral derecho modular para Monopoly -->
-<nav class="sidebar-monopoly d-flex flex-column align-items-center bg-light border-start p-3" id="sidebar-monopoly">
-  <h5 class="mb-4 text-center">Acciones</h5>
-  <button class="btn btn-primary w-100 mb-3" id="btnLanzarDados">
-    <span id="dados-resultado">🎲🎲</span> Lanzar Dados
-  </button>
-  <div class="d-grid gap-2 w-100" id="acciones-casilla">
-    <button class="btn btn-success" id="btnComprarPropiedad" disabled>Comprar Propiedad</button>
-    <button class="btn btn-warning" id="btnPagarRenta" disabled>Pagar Renta</button>
-    <button class="btn btn-info" id="btnConstruirCasa" disabled>Construir Casa</button>
-    <button class="btn btn-info" id="btnConstruirHotel" disabled>Construir Hotel</button>
-    <button class="btn btn-secondary" id="btnHipotecar" disabled>Hipotecar Propiedad</button>
-    <button class="btn btn-secondary" id="btnDeshipotecar" disabled>Deshipotecar Propiedad</button>
-    <button class="btn btn-outline-primary" id="btnCartaSorpresa" disabled>Carta Sorpresa</button>
-    <button class="btn btn-outline-primary" id="btnCajaComunidad" disabled>Caja de Comunidad</button>
-    <button class="btn btn-danger" id="btnPagarImpuesto" disabled>Pagar Impuesto</button>
-    <button class="btn btn-dark" id="btnIrCarcel" disabled>Ir a Cárcel / Pagar Salida</button>
-    <button class="btn btn-outline-success" id="btnFinalizarJuego">Finalizar Juego</button>
-  </div>
-  <hr class="my-3 w-100">
-  <button class="btn btn-outline-info w-100 mb-2" id="btnRankingSidebar">Ver Ranking Global</button>
-</nav>
 
     <div class="main-container">
         <header class="controls">
@@ -50,15 +30,44 @@
             </div>
         </header>
 
-        <main>
-            <!-- Contenedor donde se renderizará el tablero -->
-            <div id="boardContainer" class="board-container">
-                <div class="loading">
-                    <p>Inicializando tablero...</p>
-                    <div class="spinner"></div>
+        <!-- NUEVO contenedor para tablero + nav -->
+
+        <!-- NUEVO contenedor para tablero + nav -->
+        <section class="board-and-actions">
+            <main class="main-board">
+                <div id="boardContainer" class="board-container">
+                    <div class="loading">
+                        <p>Inicializando tablero...</p>
+                        <div class="spinner"></div>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+
+            <!-- MUEVE AQUÍ tu nav existente (córtalo de arriba y pégalo aquí) -->
+            <nav class="sidebar-monopoly d-flex flex-column align-items-center bg-light border-start p-3"
+                id="sidebar-monopoly">
+                <h5 class="mb-4 text-center">Acciones</h5>
+                <button class="btn btn-primary w-100 mb-3" id="btnLanzarDados">
+                    <span id="dados-resultado">🎲🎲</span> Lanzar Dados
+                </button>
+                <div class="d-grid gap-2 w-100" id="acciones-casilla">
+                    <button class="btn btn-success" id="btnComprarPropiedad" disabled>Comprar Propiedad</button>
+                    <button class="btn btn-warning" id="btnPagarRenta" disabled>Pagar Renta</button>
+                    <button class="btn btn-info" id="btnConstruirCasa" disabled>Construir Casa</button>
+                    <button class="btn btn-info" id="btnConstruirHotel" disabled>Construir Hotel</button>
+                    <button class="btn btn-secondary" id="btnHipotecar" disabled>Hipotecar Propiedad</button>
+                    <button class="btn btn-secondary" id="btnDeshipotecar" disabled>Deshipotecar Propiedad</button>
+                    <button class="btn btn-outline-primary" id="btnCartaSorpresa" disabled>Carta Sorpresa</button>
+                    <button class="btn btn-outline-primary" id="btnCajaComunidad" disabled>Caja de Comunidad</button>
+                    <button class="btn btn-danger" id="btnPagarImpuesto" disabled>Pagar Impuesto</button>
+                    <button class="btn btn-dark" id="btnIrCarcel" disabled>Ir a Cárcel / Pagar Salida</button>
+                    <button class="btn btn-outline-success" id="btnFinalizarJuego">Finalizar Juego</button>
+                </div>
+                <hr class="my-3 w-100">
+                <button class="btn btn-outline-info w-100 mb-2" id="btnRankingSidebar">Ver Ranking Global</button>
+            </nav>
+        </section>
+
 
         <footer class="game-controls">
             <div class="player-actions">
@@ -78,7 +87,8 @@
     </div>
 
     <!-- Scripts -->
-   <script type="module" src="/models/Game.js"></script>
+    <script type="module" src="/models/Game.js"></script>
 
 </body>
+
 </html>
