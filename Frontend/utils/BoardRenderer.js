@@ -92,28 +92,34 @@ class BoardRenderer {
      */
     calculateDimensions() {
         const { totalSquares, cornerSize, sideSquareWidth, sideSquareHeight } = this.options;
-        
-        // Calcular cuántas casillas van en cada lado (excluyendo esquinas)
+
+        // Caso especial: tablero clásico de 40 casillas
+        if (totalSquares === 40) {
+            const betweenCorners = 9;  // 9 casillas entre esquinas por lado
+            const boardWidth = cornerSize * 2 + betweenCorners * sideSquareWidth;
+            const boardHeight = boardWidth;
+            return {
+                boardWidth,
+                boardHeight,
+                // Tablero clásico: cada lado tiene exactamente 10 casillas (incluye esquinas compartidas conceptualmente)
+                sides: { bottom: 10, left: 10, top: 10, right: 10 },
+                squaresPerSide: 10
+            };
+        }
+
+        // Fallback genérico para otros tamaños dinámicos
         const squaresPerSide = Math.floor((totalSquares - 4) / 4);
         const remainingSquares = (totalSquares - 4) % 4;
-        
         const sides = {
             bottom: squaresPerSide + (remainingSquares > 0 ? 1 : 0),
             left: squaresPerSide + (remainingSquares > 1 ? 1 : 0),
             top: squaresPerSide + (remainingSquares > 2 ? 1 : 0),
             right: squaresPerSide
         };
-
         const maxSideSquares = Math.max(...Object.values(sides));
         const boardWidth = cornerSize * 2 + maxSideSquares * sideSquareWidth;
-        const boardHeight = boardWidth; // Tablero cuadrado
-
-        return {
-            boardWidth,
-            boardHeight,
-            sides,
-            squaresPerSide: maxSideSquares
-        };
+        const boardHeight = boardWidth;
+        return { boardWidth, boardHeight, sides, squaresPerSide: maxSideSquares };
     }
 
     /**
@@ -179,8 +185,18 @@ class BoardRenderer {
         squareElement.setAttribute('data-square-id', square.id);
         squareElement.setAttribute('data-position', position);
 
-        // Calcular posición y tamaño según el lado
-        const pos = this.calculateSquarePosition(side, index, dimensions);
+        // Calcular posición y tamaño
+        let pos;
+        // Detectar tablero de 40 casillas y usar cálculo clásico simplificado
+        const totalSquares = this.board.squaresByPosition ? this.board.squaresByPosition.length : this.options.totalSquares;
+        const isClassic40 = totalSquares === 40;
+
+        if (isClassic40) {
+            // Para tablero clásico usar posicionamiento simplificado basado en índice relativo por lado
+            pos = this.calculateClassic40Position(side, index, position, dimensions);
+        } else {
+            pos = this.calculateSquarePosition(side, index, dimensions);
+        }
         
         squareElement.style.cssText = `
             position: absolute;
@@ -215,64 +231,75 @@ class BoardRenderer {
      */
     calculateSquarePosition(side, index, dimensions) {
         const { cornerSize, sideSquareWidth, sideSquareHeight } = this.options;
-        const { boardWidth, boardHeight } = dimensions;
+        const { boardWidth, boardHeight, squaresPerSide } = dimensions;
 
         let x, y, width, height, fontSize = 10;
+        const lastIndex = squaresPerSide - 1; // Para tablero clásico: 9
+
+        const isCorner = (i) => i === 0 || i === lastIndex;
 
         switch (side) {
             case 'bottom':
-                if (index === 0) { // Esquina inferior derecha
-                    x = boardWidth - cornerSize;
+                if (isCorner(index)) {
+                    // 0 = esquina inferior derecha, lastIndex = esquina inferior izquierda
+                    x = index === 0 ? boardWidth - cornerSize : 0;
                     y = boardHeight - cornerSize;
                     width = cornerSize;
                     height = cornerSize;
                     fontSize = 12;
                 } else {
+                    // Casillas intermedias de derecha a izquierda
                     x = boardWidth - cornerSize - (index * sideSquareWidth);
                     y = boardHeight - sideSquareHeight;
                     width = sideSquareWidth;
                     height = sideSquareHeight;
                 }
                 break;
-                
+
             case 'left':
-                if (index === 0) { // Esquina inferior izquierda
+                if (isCorner(index)) {
+                    // 0 = esquina inferior izquierda, lastIndex = esquina superior izquierda
                     x = 0;
-                    y = boardHeight - cornerSize;
+                    y = index === 0 ? boardHeight - cornerSize : 0;
                     width = cornerSize;
                     height = cornerSize;
                     fontSize = 12;
                 } else {
-                    x = 0;
+                    // Casillas intermedias de abajo hacia arriba
                     y = boardHeight - cornerSize - (index * sideSquareWidth);
+                    x = 0;
                     width = sideSquareHeight;
                     height = sideSquareWidth;
                 }
                 break;
-                
+
             case 'top':
-                if (index === 0) { // Esquina superior izquierda
-                    x = 0;
+                if (isCorner(index)) {
+                    // 0 = esquina superior izquierda, lastIndex = esquina superior derecha
+                    x = index === 0 ? 0 : boardWidth - cornerSize;
                     y = 0;
                     width = cornerSize;
                     height = cornerSize;
                     fontSize = 12;
                 } else {
+                    // Casillas intermedias de izquierda a derecha
                     x = cornerSize + ((index - 1) * sideSquareWidth);
                     y = 0;
                     width = sideSquareWidth;
                     height = sideSquareHeight;
                 }
                 break;
-                
+
             case 'right':
-                if (index === 0) { // Esquina superior derecha
+                if (isCorner(index)) {
+                    // 0 = esquina superior derecha, lastIndex = esquina inferior derecha
                     x = boardWidth - cornerSize;
-                    y = 0;
+                    y = index === 0 ? 0 : boardHeight - cornerSize;
                     width = cornerSize;
                     height = cornerSize;
                     fontSize = 12;
                 } else {
+                    // Casillas intermedias de arriba hacia abajo
                     x = boardWidth - sideSquareHeight;
                     y = cornerSize + ((index - 1) * sideSquareWidth);
                     width = sideSquareHeight;
@@ -409,27 +436,166 @@ class BoardRenderer {
             return;
         }
 
-        const { sides } = dimensions;
-        let position = 0;
-        
-        // Renderizar cada lado del tablero
-        const sideNames = ['bottom', 'left', 'top', 'right'];
-        
-        sideNames.forEach(sideName => {
-            const squareCount = sides[sideName];
+        // Detectar tablero de 40 casillas (clásico) por longitud del array o método
+        const totalSquares = this.board.squaresByPosition.length;
+        console.log(`🎲 Renderizando tablero con ${totalSquares} casillas`);
+
+        // Forzar renderizado de tablero clásico si hay 40 casillas
+        if (totalSquares === 40) {
+            console.log('🔧 Renderizando tablero clásico de 40 casillas...');
+            let renderedCount = 0;
             
-            for (let i = 0; i < squareCount && position < this.board.squaresByPosition.length; i++) {
-                const square = this.board.squaresByPosition[position];
-                if (square) {
-                    const squareElement = this.createSquare(square, position, sideName, i, dimensions);
-                    this.boardElement.appendChild(squareElement);
+            // Renderizar TODAS las 40 casillas sin excepción
+            for (let globalIndex = 0; globalIndex < 40; globalIndex++) {
+                const square = this.board.squaresByPosition[globalIndex];
+                
+                if (!square) {
+                    console.error(`❌ CASILLA FALTANTE en índice ${globalIndex}`);
+                    continue;
                 }
-                position++;
+                
+                // Determinar el lado basado en el índice global según el JSON del backend
+                let side, relativeIndex;
+                if (globalIndex >= 0 && globalIndex <= 9) {
+                    side = 'bottom';
+                    relativeIndex = globalIndex;
+                } else if (globalIndex >= 10 && globalIndex <= 20) {
+                    side = 'left';
+                    relativeIndex = globalIndex - 10;
+                } else if (globalIndex >= 21 && globalIndex <= 30) {
+                    side = 'top';
+                    relativeIndex = globalIndex - 21;
+                } else if (globalIndex >= 31 && globalIndex <= 39) {
+                    side = 'right';
+                    relativeIndex = globalIndex - 31;
+                } else {
+                    console.error(`❌ Índice fuera de rango: ${globalIndex}`);
+                    continue;
+                }
+                
+                try {
+                    const squareElement = this.createSquare(square, globalIndex, side, relativeIndex, dimensions);
+                    
+                    // Debug temporal: añadir ID visible
+                    const debugSpan = document.createElement('span');
+                    debugSpan.style.cssText = 'position:absolute;top:2px;right:2px;background:red;color:white;font-size:8px;padding:1px 3px;z-index:100;border-radius:2px;';
+                    debugSpan.textContent = square.id;
+                    squareElement.appendChild(debugSpan);
+                    
+                    this.boardElement.appendChild(squareElement);
+                    renderedCount++;
+                    
+                    if (globalIndex % 10 === 0) {
+                        console.log(`   ✓ Procesado hasta índice ${globalIndex}: ID${square.id} - ${square.name}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error renderizando casilla ${globalIndex}:`, error);
+                }
             }
-        });
+            
+            console.log(`✅ TOTAL RENDERIZADAS: ${renderedCount}/40 casillas`);
+            
+            if (renderedCount !== 40) {
+                console.error(`❌❌ PROBLEMA: Se renderizaron ${renderedCount} en lugar de 40`);
+                // Mostrar detalles de las que faltan
+                for (let i = 0; i < 40; i++) {
+                    if (!this.board.squaresByPosition[i]) {
+                        console.error(`   - FALTA casilla índice ${i}`);
+                    }
+                }
+            }
+            
+        } else {
+            // Fallback para tableros dinámicos
+            console.log('📐 Usando renderizado dinámico');
+            const { sides } = dimensions;
+            let position = 0;
+            const sideNames = ['bottom', 'left', 'top', 'right'];
+            sideNames.forEach(sideName => {
+                const squareCount = sides[sideName];
+                for (let i = 0; i < squareCount && position < this.board.squaresByPosition.length; i++) {
+                    const square = this.board.squaresByPosition[position];
+                    if (square) {
+                        const squareElement = this.createSquare(square, position, sideName, i, dimensions);
+                        this.boardElement.appendChild(squareElement);
+                    }
+                    position++;
+                }
+            });
+        }
 
         // Agregar estilos CSS dinámicos
         this.injectDynamicStyles();
+    }
+
+    /**
+     * Determina el lado (bottom, left, top, right) según el índice global en tablero clásico
+     */
+    getClassic40Side(index) {
+        if (index >= 0 && index <= 9) return 'bottom';      // 0..9 (solo esquina en 0)
+        if (index >= 10 && index <= 20) return 'left';      // 10..20 (esquinas 10 y 20)
+        if (index >= 21 && index <= 30) return 'top';       // 21..30 (esquina 30)
+        return 'right';                                     // 31..39
+    }
+
+    /**
+     * Calcula posición absoluta para un tablero clásico de 40 casillas usando índice global.
+     * Respeta la estructura real del JSON (longitudes: bottom 10, left 11, top 10, right 9).
+     */
+    calculateClassic40Position(side, relativeIndex, globalIndex, dimensions) {
+        const { cornerSize, sideSquareWidth, sideSquareHeight } = this.options;
+        const { boardWidth, boardHeight } = dimensions;
+        let x, y, width, height, fontSize = 10;
+
+        // Esquinas fijas del tablero Monopoly
+        if (globalIndex === 0) { // Salida (esquina inferior derecha)
+            return { x: boardWidth - cornerSize, y: boardHeight - cornerSize, width: cornerSize, height: cornerSize, fontSize: 12 };
+        }
+        if (globalIndex === 10) { // Cárcel (esquina inferior izquierda)  
+            return { x: 0, y: boardHeight - cornerSize, width: cornerSize, height: cornerSize, fontSize: 12 };
+        }
+        if (globalIndex === 20) { // Parqueo Gratis (esquina superior izquierda)
+            return { x: 0, y: 0, width: cornerSize, height: cornerSize, fontSize: 12 };
+        }
+        if (globalIndex === 30) { // Ve a la Cárcel (esquina superior derecha)
+            return { x: boardWidth - cornerSize, y: 0, width: cornerSize, height: cornerSize, fontSize: 12 };
+        }
+
+        // Casillas del lado inferior (1-9): de derecha a izquierda
+        if (globalIndex >= 1 && globalIndex <= 9) {
+            x = boardWidth - cornerSize - (relativeIndex * sideSquareWidth);
+            y = boardHeight - sideSquareHeight;
+            width = sideSquareWidth;
+            height = sideSquareHeight;
+        }
+        // Casillas del lado izquierdo (11-19): de abajo hacia arriba  
+        else if (globalIndex >= 11 && globalIndex <= 19) {
+            x = 0;
+            y = boardHeight - cornerSize - (relativeIndex * sideSquareWidth);
+            width = sideSquareHeight;
+            height = sideSquareWidth;
+        }
+        // Casillas del lado superior (21-29): de izquierda a derecha
+        else if (globalIndex >= 21 && globalIndex <= 29) {
+            x = cornerSize + ((relativeIndex) * sideSquareWidth);
+            y = 0;
+            width = sideSquareWidth;
+            height = sideSquareHeight;
+        }
+        // Casillas del lado derecho (31-39): de arriba hacia abajo
+        else if (globalIndex >= 31 && globalIndex <= 39) {
+            x = boardWidth - sideSquareHeight;
+            y = cornerSize + ((relativeIndex) * sideSquareWidth);
+            width = sideSquareHeight;
+            height = sideSquareWidth;
+        }
+        // Fallback (no debería ocurrir)
+        else {
+            console.error(`❌ Error de posicionamiento para casilla ${globalIndex}`);
+            x = 0; y = 0; width = sideSquareWidth; height = sideSquareHeight;
+        }
+
+        return { x, y, width, height, fontSize };
     }
 
     /**

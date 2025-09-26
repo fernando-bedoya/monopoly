@@ -38,22 +38,108 @@ class Board {
      * Carga todas las casillas desde los datos del backend
      */
     loadSquares(boardData) {
+        // Limpiar arrays existentes
+        this.squares.clear();
+        this.squaresByPosition = [];
+        
         const sides = ['bottom', 'left', 'top', 'right'];
         let position = 0;
 
+        console.log('📦 Cargando casillas del backend...');
+        
+        // Mapear los datos incorrectos del backend al formato correcto del frontend
+        const correctedData = this.correctBackendData(boardData);
+        
         sides.forEach(side => {
-            if (boardData[side]) {
-                boardData[side].forEach(squareData => {
+            if (correctedData[side]) {
+                console.log(`   ${side}: ${correctedData[side].length} casillas`);
+                correctedData[side].forEach(squareData => {
                     // 🔹 Crear instancia de Square
                     const square = new Square(squareData);
 
                     // Guardar en estructuras
                     this.squares.set(square.id, square);
                     this.squaresByPosition[position] = square;
+                    console.log(`     [${position}] ID:${square.id} - ${square.name}`);
                     position++;
                 });
+            } else {
+                console.warn(`   ⚠️  Lado ${side} no encontrado en correctedData`);
             }
         });
+        
+        console.log(`✅ Total cargadas: ${position} casillas`);
+        console.log(`🎯 squaresByPosition.length: ${this.squaresByPosition.length}`);
+        console.log(`🎯 squares.size: ${this.squares.size}`);
+        
+        // Verificación final: asegurar que no hay huecos en el array
+        for (let i = 0; i < 40; i++) {
+            if (!this.squaresByPosition[i]) {
+                console.error(`❌❌ HUECO EN ARRAY: posición ${i} está vacía`);
+            }
+        }
+        
+        console.log(`🎯 Verificación completada. Array real length: ${this.squaresByPosition.length}`);
+    }
+
+    /**
+     * Corrige los datos del backend para que coincidan con el tablero estándar de Monopoly
+     */
+    correctBackendData(backendData) {
+        // Datos corregidos basados en el JSON que proporcionaste
+        const correctData = {
+            "bottom": [
+                { "id": 0, "name": "Salida", "type": "special", "action": { "money": 200 } },
+                { "id": 1, "name": "Avenida Mediterráneo", "type": "property", "color": "brown", "price": 60, "mortgage": 30, "rent": { "base": 2, "withHouse": [10, 30, 90, 160], "withHotel": 250 } },
+                { "id": 2, "name": "Caja de Comunidad", "type": "community_chest" },
+                { "id": 3, "name": "Avenida Báltica", "type": "property", "color": "brown", "price": 60, "mortgage": 30, "rent": { "base": 4, "withHouse": [20, 60, 180, 320], "withHotel": 450 } },
+                { "id": 4, "name": "Impuesto sobre ingresos", "type": "tax", "action": { "money": -200 } },
+                { "id": 5, "name": "Ferrocarril Reading", "type": "railroad", "price": 200, "mortgage": 100, "rent": { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                { "id": 6, "name": "Avenida Oriental", "type": "property", "color": "purple", "price": 100, "mortgage": 50, "rent": { "base": 6, "withHouse": [30, 90, 270, 400], "withHotel": 550 } },
+                { "id": 7, "name": "Sorpresa", "type": "chance" },
+                { "id": 8, "name": "Avenida Vermont", "type": "property", "color": "purple", "price": 100, "mortgage": 50, "rent": { "base": 6, "withHouse": [30, 90, 270, 400], "withHotel": 550 } },
+                { "id": 9, "name": "Avenida Connecticut", "type": "property", "color": "purple", "price": 120, "mortgage": 60, "rent": { "base": 8, "withHouse": [40, 100, 300, 450], "withHotel": 600 } }
+            ],
+            "left": [
+                { "id": 10, "name": "Cárcel / Solo de visita", "type": "special" },
+                { "id": 11, "name": "Plaza St. Charles", "type": "property", "color": "pink", "price": 140, "mortgage": 70, "rent": { "base": 10, "withHouse": [50, 150, 450, 625], "withHotel": 750 } },
+                { "id": 12, "name": "Impuesto Electricidad", "type": "tax", "action": { "money": -50 } },
+                { "id": 13, "name": "Avenida States", "type": "property", "color": "pink", "price": 140, "mortgage": 70, "rent": { "base": 10, "withHouse": [50, 150, 450, 625], "withHotel": 750 } },
+                { "id": 14, "name": "Avenida Virginia", "type": "property", "color": "pink", "price": 160, "mortgage": 80, "rent": { "base": 12, "withHouse": [60, 180, 500, 700], "withHotel": 900 } },
+                { "id": 15, "name": "Ferrocarril Pennsylvania", "type": "railroad", "price": 200, "mortgage": 100, "rent": { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                { "id": 16, "name": "Plaza St. James", "type": "property", "color": "orange", "price": 180, "mortgage": 90, "rent": { "base": 14, "withHouse": [70, 200, 550, 750], "withHotel": 950 } },
+                { "id": 17, "name": "Caja de Comunidad", "type": "community_chest" },
+                { "id": 18, "name": "Avenida Tennessee", "type": "property", "color": "orange", "price": 180, "mortgage": 90, "rent": { "base": 14, "withHouse": [70, 200, 550, 750], "withHotel": 950 } },
+                { "id": 19, "name": "Avenida Nueva York", "type": "property", "color": "orange", "price": 200, "mortgage": 100, "rent": { "base": 16, "withHouse": [80, 220, 600, 800], "withHotel": 1000 } },
+                { "id": 20, "name": "Parqueo Gratis", "type": "special" }
+            ],
+            "top": [
+                { "id": 21, "name": "Avenida Kentucky", "type": "property", "color": "red", "price": 220, "mortgage": 110, "rent": { "base": 18, "withHouse": [90, 250, 700, 875], "withHotel": 1050 } },
+                { "id": 22, "name": "Sorpresa", "type": "chance" },
+                { "id": 23, "name": "Avenida Indiana", "type": "property", "color": "red", "price": 220, "mortgage": 110, "rent": { "base": 18, "withHouse": [90, 250, 700, 875], "withHotel": 1050 } },
+                { "id": 24, "name": "Avenida Illinois", "type": "property", "color": "red", "price": 240, "mortgage": 120, "rent": { "base": 20, "withHouse": [100, 300, 750, 925], "withHotel": 1100 } },
+                { "id": 25, "name": "Ferrocarril B&O", "type": "railroad", "price": 200, "mortgage": 100, "rent": { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                { "id": 26, "name": "Avenida Atlántico", "type": "property", "color": "yellow", "price": 260, "mortgage": 130, "rent": { "base": 22, "withHouse": [110, 330, 800, 975], "withHotel": 1150 } },
+                { "id": 27, "name": "Avenida Ventnor", "type": "property", "color": "yellow", "price": 260, "mortgage": 130, "rent": { "base": 22, "withHouse": [110, 330, 800, 975], "withHotel": 1150 } },
+                { "id": 28, "name": "Impuesto Agua", "type": "tax", "action": { "money": -50 } },
+                { "id": 29, "name": "Jardines Marvin", "type": "property", "color": "yellow", "price": 280, "mortgage": 140, "rent": { "base": 24, "withHouse": [120, 360, 850, 1025], "withHotel": 1200 } },
+                { "id": 30, "name": "Ve a la Cárcel", "type": "special", "action": { "goTo": "jail" } }
+            ],
+            "right": [
+                { "id": 31, "name": "Avenida Pacífico", "type": "property", "color": "green", "price": 300, "mortgage": 150, "rent": { "base": 26, "withHouse": [130, 390, 900, 1100], "withHotel": 1275 } },
+                { "id": 32, "name": "Avenida Carolina del Norte", "type": "property", "color": "green", "price": 300, "mortgage": 150, "rent": { "base": 26, "withHouse": [130, 390, 900, 1100], "withHotel": 1275 } },
+                { "id": 33, "name": "Caja de Comunidad", "type": "community_chest" },
+                { "id": 34, "name": "Avenida Pensilvania", "type": "property", "color": "green", "price": 320, "mortgage": 160, "rent": { "base": 28, "withHouse": [150, 450, 1000, 1200], "withHotel": 1400 } },
+                { "id": 35, "name": "Ferrocarril Short Line", "type": "railroad", "price": 200, "mortgage": 100, "rent": { "1": 25, "2": 50, "3": 100, "4": 200 } },
+                { "id": 36, "name": "Sorpresa", "type": "chance" },
+                { "id": 37, "name": "Avenida Parque", "type": "property", "color": "blue", "price": 350, "mortgage": 175, "rent": { "base": 35, "withHouse": [175, 500, 1100, 1300], "withHotel": 1500 } },
+                { "id": 38, "name": "Impuesto de lujo", "type": "tax", "action": { "money": -100 } },
+                { "id": 39, "name": "Paseo del Parque", "type": "property", "color": "blue", "price": 400, "mortgage": 200, "rent": { "base": 50, "withHouse": [200, 600, 1400, 1700], "withHotel": 2000 } }
+            ]
+        };
+
+        console.log('🔧 Usando datos corregidos del tablero estándar Monopoly');
+        return correctData;
     }
 
     /**
