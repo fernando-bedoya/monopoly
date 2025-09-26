@@ -1,80 +1,377 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monopoly</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  <link rel="stylesheet" href="assets/css/simplex.css">
-  <link rel="stylesheet" href="assets/css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking Global - Monopoly</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/views/css/style.css">
+    <style>
+        .ranking-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .ranking-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        .ranking-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .ranking-row {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.3s ease;
+        }
+        .ranking-row:hover {
+            background-color: #f8f9fa;
+        }
+        .ranking-position {
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 80px;
+            text-align: center;
+        }
+        .position-1 { color: #ffd700; }
+        .position-2 { color: #c0c0c0; }
+        .position-3 { color: #cd7f32; }
+        .flag-img {
+            width: 32px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+        }
+        .player-info {
+            display: flex;
+            align-items: center;
+        }
+        .score-badge {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 50px;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .back-btn {
+            margin-bottom: 20px;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-  <!-- Banner como fondo principal -->
-  <img src="assets/img/banner2.png" class="banner-fondo-principal" alt="Banner Monopoly">
+    <div class="ranking-container">
+        <!-- Header del Ranking -->
+        <div class="ranking-header">
+            <h1>🏆 Ranking Global de Monopoly</h1>
+            <p class="mb-0">Los mejores jugadores de todos los tiempos</p>
+        </div>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Monopoly</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
-        aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarColor01">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <a class="nav-link active" href="#">Inicio
-              <span class="visually-hidden">(current)</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Nuevo Juego</a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true"
-              aria-expanded="false">
-              Jugadores
-            </a>
-            <div class="dropdown-menu">
-              <a class="dropdown-item" href="#">Ranking</a>
-              <a class="dropdown-item" href="#">Another action</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="#">Something else here</a>
+        <!-- Botón de regreso -->
+        <div class="back-btn">
+            <button class="btn btn-outline-primary" onclick="window.history.back()">
+                ← Regresar
+            </button>
+        </div>
+
+        <!-- Estadísticas generales -->
+        <div class="stats-container" id="statsContainer" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalPlayers">0</div>
+                <div class="stat-label">Jugadores Totales</div>
             </div>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-          </li>
-        </ul>
-        <form class="d-flex">
-          <input class="form-control me-sm-2" type="search" placeholder="Buscar jugadores">
-          <button class="btn btn-secondary my-2 my-sm-0" type="submit">Buscar</button>
-        </form>
-      </div>
+            <div class="stat-card">
+                <div class="stat-number" id="highestScore">$0</div>
+                <div class="stat-label">Puntaje Más Alto</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCountries">0</div>
+                <div class="stat-label">Países Representados</div>
+            </div>
+        </div>
+
+        <!-- Contenedor de loading -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando ranking...</span>
+            </div>
+            <p class="mt-3">Cargando ranking global...</p>
+        </div>
+
+        <!-- Contenedor de error -->
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <h5>❌ Error al cargar el ranking</h5>
+            <p id="errorDetails">No se pudo conectar con el servidor.</p>
+            <button class="btn btn-primary" onclick="cargarRanking()">Intentar de nuevo</button>
+        </div>
+
+        <!-- Tabla de ranking -->
+        <div class="ranking-table" id="rankingTable" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background: #f8f9fa;">
+                        <tr>
+                            <th width="80">Pos</th>
+                            <th>Jugador</th>
+                            <th width="150" class="text-center">País</th>
+                            <th width="150" class="text-end">Puntaje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody">
+                        <!-- Los datos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mensaje de ranking vacío -->
+        <div class="text-center" id="emptyMessage" style="display: none; padding: 50px;">
+            <h4>📊 No hay datos en el ranking</h4>
+            <p>Sé el primero en jugar y aparecer en el ranking global!</p>
+            <button class="btn btn-primary" onclick="window.location.href='../index.html'">
+                Jugar Ahora
+            </button>
+        </div>
     </div>
-  </nav>
 
-  <!-- Botón NUEVO JUEGO -->
-  <div class="container text-center mt-5">
-    <button class="btn btn-lg btn-success" id="btnNuevoJuego">NUEVO JUEGO</button>
-  </div>
+    <!-- Botón flotante de refrescar -->
+    <button class="btn btn-primary rounded-circle refresh-btn" onclick="cargarRanking()" title="Actualizar ranking">
+        🔄
+    </button>
 
-  <!-- Contenedor para modales -->
-  <div id="modales-container"></div>
+    <script>
+        // Variables globales
+        let rankingData = [];
 
-  <script>
-    // Cargar modales externos
-    fetch('html/modales.html')
-      .then(res => res.text())
-      .then(html => {
-        document.getElementById('modales-container').innerHTML = html;
-      });
+        /**
+         * Carga el ranking desde el API
+         */
+        async function cargarRanking() {
+            mostrarLoading();
+            
+            try {
+                console.log('🔄 Cargando ranking desde el API...');
+                
+                const response = await fetch('http://127.0.0.1:5000/ranking', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
 
-    // Redirección al juego
-    document.getElementById('btnNuevoJuego').addEventListener('click', () => {
-      window.location.href = 'html/game.html';
-    });
-  </script>
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Ranking cargado exitosamente:', data);
+                
+                rankingData = Array.isArray(data) ? data : [];
+                mostrarRanking(rankingData);
+                
+            } catch (error) {
+                console.error('❌ Error al cargar ranking:', error);
+                mostrarError(error.message);
+            }
+        }
+
+        /**
+         * Muestra el estado de loading
+         */
+        function mostrarLoading() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('rankingTable').style.display = 'none';
+            document.getElementById('emptyMessage').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+        }
+
+        /**
+         * Muestra mensaje de error
+         */
+        function mostrarError(mensaje) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('rankingTable').style.display = 'none';
+            document.getElementById('emptyMessage').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+            
+            document.getElementById('errorDetails').textContent = mensaje;
+        }
+
+        /**
+         * Muestra el ranking en la tabla
+         */
+        function mostrarRanking(data) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            if (!data || data.length === 0) {
+                document.getElementById('emptyMessage').style.display = 'block';
+                document.getElementById('rankingTable').style.display = 'none';
+                document.getElementById('statsContainer').style.display = 'none';
+                return;
+            }
+
+            // Mostrar estadísticas
+            mostrarEstadisticas(data);
+            
+            // Mostrar tabla
+            document.getElementById('rankingTable').style.display = 'block';
+            document.getElementById('emptyMessage').style.display = 'none';
+            
+            const tbody = document.getElementById('rankingTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach((jugador, index) => {
+                const position = index + 1;
+                const row = crearFilaRanking(jugador, position);
+                tbody.appendChild(row);
+            });
+        }
+
+        /**
+         * Crea una fila de la tabla de ranking
+         */
+        function crearFilaRanking(jugador, position) {
+            const row = document.createElement('tr');
+            row.className = 'ranking-row';
+
+            // Columna de posición
+            const positionCell = document.createElement('td');
+            positionCell.className = `ranking-position position-${position <= 3 ? position : ''}`;
+            
+            let emoji = '';
+            if (position === 1) emoji = '🥇';
+            else if (position === 2) emoji = '🥈';
+            else if (position === 3) emoji = '🥉';
+            else emoji = position;
+            
+            positionCell.textContent = emoji;
+
+            // Columna de jugador
+            const playerCell = document.createElement('td');
+            playerCell.innerHTML = `
+                <div class="player-info">
+                    <strong>${jugador.nick_name || 'Jugador Anónimo'}</strong>
+                </div>
+            `;
+
+            // Columna de país con bandera
+            const countryCell = document.createElement('td');
+            countryCell.className = 'text-center';
+            const countryCode = jugador.country_code || 'co';
+            countryCell.innerHTML = `
+                <div class="player-info justify-content-center">
+                    <img src="https://flagsapi.com/${countryCode.toUpperCase()}/flat/32.png" 
+                         alt="${countryCode}" class="flag-img" 
+                         onerror="this.src='https://flagsapi.com/CO/flat/32.png'">
+                    <span>${countryCode.toUpperCase()}</span>
+                </div>
+            `;
+
+            // Columna de puntaje
+            const scoreCell = document.createElement('td');
+            scoreCell.className = 'text-end';
+            scoreCell.innerHTML = `<span class="score-badge">$${jugador.score?.toLocaleString() || '0'}</span>`;
+
+            row.appendChild(positionCell);
+            row.appendChild(playerCell);
+            row.appendChild(countryCell);
+            row.appendChild(scoreCell);
+
+            return row;
+        }
+
+        /**
+         * Muestra estadísticas generales
+         */
+        function mostrarEstadisticas(data) {
+            const totalPlayers = data.length;
+            const highestScore = Math.max(...data.map(j => j.score || 0));
+            const countries = [...new Set(data.map(j => j.country_code || 'co'))];
+            const totalCountries = countries.length;
+
+            document.getElementById('totalPlayers').textContent = totalPlayers;
+            document.getElementById('highestScore').textContent = '$' + highestScore.toLocaleString();
+            document.getElementById('totalCountries').textContent = totalCountries;
+            document.getElementById('statsContainer').style.display = 'grid';
+        }
+
+        /**
+         * Función para refrescar el ranking cada 30 segundos
+         */
+        function iniciarRefrescoAutomatico() {
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('🔄 Refrescando ranking automáticamente...');
+                    cargarRanking();
+                }
+            }, 30000); // 30 segundos
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎮 Página de ranking cargada');
+            cargarRanking();
+            iniciarRefrescoAutomatico();
+        });
+
+        // Manejar tecla F5 o Ctrl+R para refrescar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                cargarRanking();
+            }
+        });
+    </script>
 </body>
 </html>

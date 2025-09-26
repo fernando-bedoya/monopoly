@@ -6,5 +6,9 @@
     "abc": {
         "score": 105,
         "country_code": "co"
+    },
+    "Pedro pony ": {
+        "score": 1500,
+        "country_code": "co"
     }
 }
