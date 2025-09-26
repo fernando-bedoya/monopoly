@@ -1,5 +1,5 @@
 import Board from './Board.js';
-import Square from './Square.js'; // no lo usamos directo, pero queda listo
+import Square from './SquareBase.js'; // no lo usamos directo, pero queda listo
 import BoardRenderer from '../utils/BoardRenderer.js';
 import BoardUtils from '../utils/BoardUtils.js';
 

@@ -1,7 +1,7 @@
 /**
  * Modelo de Casilla del Tablero de Monopoly
  */
-import Square from '../models/Square.js';
+import Square from './Square.js';
 /**
  * Modelo del Tablero de Monopoly
  */
