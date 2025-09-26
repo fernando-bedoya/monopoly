@@ -99,53 +99,77 @@ async function cargarModales() {
  * Inicializa todos los eventos de los modales y botones
  */
 function inicializarEventos() {
-  // Mostrar el primer modal al hacer clic en NUEVO JUEGO
-  document.getElementById('btnNuevoJuego').addEventListener('click', () => {
-    const modalJugadores = new bootstrap.Modal(document.getElementById('modalJugadores'));
-    modalJugadores.show();
-  });
+  const btnNuevo = document.getElementById('btnNuevoJuego');
+  const btnRankingInicio = document.getElementById('btnVerRankingInicio');
+  const btnSiguiente = document.getElementById('btnSiguiente');
+  const btnIniciar = document.getElementById('btnIniciar');
+  const btnRegresar = document.getElementById('btnRegresarConfig');
+  const selectNum = document.getElementById('numJugadores');
 
-  // Al hacer clic en "Siguiente", mostrar el segundo modal y generar los campos
-  document.getElementById('btnSiguiente').addEventListener('click', () => {
-    const num = document.getElementById('numJugadores').value;
-    generarCamposNicknames(num);
+  if (btnRankingInicio) {
+    btnRankingInicio.addEventListener('click', () => {
+      window.location.href = 'views/ranking.html';
+    });
+  }
 
-    const modalJugadores = bootstrap.Modal.getInstance(document.getElementById('modalJugadores'));
-    modalJugadores.hide();
+  if (btnNuevo) {
+    btnNuevo.addEventListener('click', () => {
+      const modalJug = new bootstrap.Modal(document.getElementById('modalJugadores'));
+      modalJug.show();
+    });
+  }
 
-    const modalDatos = new bootstrap.Modal(document.getElementById('modalDatosJugadores'));
-    modalDatos.show();
-  });
+  // Validar selección de número de jugadores
+  if (selectNum) {
+    selectNum.addEventListener('change', () => {
+      if (selectNum.value) {
+        btnSiguiente.disabled = false;
+      } else {
+        btnSiguiente.disabled = true;
+      }
+    });
+  }
 
-  // Manejar el botón "Iniciar Juego" del segundo modal
-  document.getElementById('btnIniciar').addEventListener('click', () => {
-    // Recoger los datos de los jugadores
-    const numJugadores = document.getElementById('numJugadores').value;
-    const jugadores = [];
-    
-    for (let i = 1; i <= numJugadores; i++) {
-      const countryCode = document.getElementById(`pais${i}`).value;
-      const jugador = {
-        nickname: document.getElementById(`nickname${i}`).value || `Jugador ${i}`,
-        pais: document.getElementById(`pais${i}`).value,
-        country_code: countryCode.toLowerCase(), // Agregar código de país para el backend
-        color: document.getElementById(`color${i}`).value,
-        ficha: document.getElementById(`ficha${i}`).value
-      };
-      jugadores.push(jugador);
-    }
-    
-    // Guardar los datos en localStorage para usarlos en el juego
-    localStorage.setItem('jugadores', JSON.stringify(jugadores));
-    localStorage.setItem('numJugadores', numJugadores);
-    
-    // Cerrar el modal
-    const modalDatos = bootstrap.Modal.getInstance(document.getElementById('modalDatosJugadores'));
-    modalDatos.hide();
-    
-    // Redirigir al tablero del juego
-    window.location.href = 'views/game.html';
-  });
+  if (btnSiguiente) {
+    btnSiguiente.addEventListener('click', () => {
+      if (!selectNum.value) {
+        selectNum.classList.add('is-invalid');
+        return;
+      }
+      const num = parseInt(selectNum.value, 10);
+      generarCamposNicknames(num);
+      const modalJug = bootstrap.Modal.getInstance(document.getElementById('modalJugadores'));
+      modalJug.hide();
+      const modalDatos = new bootstrap.Modal(document.getElementById('modalDatosJugadores'));
+      modalDatos.show();
+    });
+  }
+
+  if (btnRegresar) {
+    btnRegresar.addEventListener('click', () => {
+      const modalDatos = bootstrap.Modal.getInstance(document.getElementById('modalDatosJugadores'));
+      modalDatos.hide();
+      const modalJug = new bootstrap.Modal(document.getElementById('modalJugadores'));
+      modalJug.show();
+    });
+  }
+
+  if (btnIniciar) {
+    btnIniciar.addEventListener('click', () => {
+      const validacion = validarJugadores();
+      if (!validacion.ok) {
+        mostrarErroresJugadores(validacion.errores);
+        return;
+      }
+      ocultarErroresJugadores();
+      const { jugadores, numJugadores } = recolectarJugadores();
+      localStorage.setItem('jugadores', JSON.stringify(jugadores));
+      localStorage.setItem('numJugadores', numJugadores);
+      const modalDatos = bootstrap.Modal.getInstance(document.getElementById('modalDatosJugadores'));
+      modalDatos.hide();
+      window.location.href = 'views/game.html';
+    });
+  }
 }
 
 /**
@@ -187,13 +211,30 @@ function generarCamposNicknames(num) {
     return;
   }
   
+  const usadosNick = new Set();
+  const generarNickname = (i) => {
+    let base = `Jugador${i}`;
+    let intento = base;
+    let c = 1;
+    while (usadosNick.has(intento.toLowerCase())) {
+      intento = base + '_' + c++;
+    }
+    usadosNick.add(intento.toLowerCase());
+    return intento;
+  };
+
   for (let i = 1; i <= num; i++) {
+    const nicknameDefault = generarNickname(i);
+    const colorDefault = colores[(i - 1) % colores.length];
+    const fichaDefault = fichas[(i - 1) % fichas.length];
+    // País por defecto: tomar el i-ésimo disponible (o el primero si no hay suficientes)
+    const countryDefault = (paisesDisponibles[i-1]?.code) || (paisesDisponibles[0]?.code) || '';
     const jugadorDiv = document.createElement('div');
     jugadorDiv.className = 'mb-2 border rounded p-2';
     
     jugadorDiv.innerHTML = `
       <label for="nickname${i}" class="form-label">Nickname Jugador ${i}</label>
-      <input type="text" class="form-control mb-2" id="nickname${i}" placeholder="Jugador ${i}" required>
+      <input type="text" class="form-control mb-2 campo-jugador" id="nickname${i}" value="${nicknameDefault}" placeholder="Jugador ${i}" data-tipo="nickname" required minlength="2" maxlength="20">
       
       <label for="pais${i}" class="form-label">País</label>
       <div class="input-group mb-2">
@@ -202,26 +243,35 @@ function generarCamposNicknames(num) {
                style="width: 32px; height: 24px; object-fit: cover; border-radius: 3px; display: none;">
           <span id="flagPlaceholder${i}" style="font-size: 12px; color: #999;">🏳️</span>
         </span>
-        <select class="form-select" id="pais${i}" required>
+        <select class="form-select campo-jugador" id="pais${i}" required data-tipo="pais">
           <option value="">Selecciona país</option>
           ${paisesDisponibles.map(p => 
-            `<option value="${p.code}">${p.name}</option>`
+            `<option value="${p.code}" ${p.code===countryDefault? 'selected':''}>${p.name}</option>`
           ).join('')}
         </select>
       </div>
       
       <label for="color${i}" class="form-label">Color de ficha</label>
-      <select class="form-select mb-2" id="color${i}">
-        ${colores.map(c => `<option value="${c}">${c}</option>`).join('')}
+      <select class="form-select mb-2 campo-jugador" id="color${i}" data-tipo="color" required>
+        ${colores.map(c => `<option value="${c}" ${c===colorDefault?'selected':''}>${c}</option>`).join('')}
       </select>
       
       <label for="ficha${i}" class="form-label">Tipo de ficha</label>
-      <select class="form-select" id="ficha${i}">
-        ${fichas.map(f => `<option value="${f}">${f}</option>`).join('')}
+      <select class="form-select campo-jugador" id="ficha${i}" data-tipo="ficha" required>
+        ${fichas.map(f => `<option value="${f}" ${f===fichaDefault?'selected':''}>${f}</option>`).join('')}
       </select>
     `;
     
     container.appendChild(jugadorDiv);
+
+    // Si hay país por defecto, actualizar bandera inmediatamente
+    if (countryDefault) {
+      const sel = document.getElementById(`pais${i}`);
+      if (sel) {
+        sel.value = countryDefault; // asegurar selección
+        actualizarBandera(i);
+      }
+    }
   }
   
   // Agregar event listeners para las banderas después de crear los elementos
@@ -235,6 +285,12 @@ function generarCamposNicknames(num) {
   }
   
   console.log(`✅ Campos generados exitosamente para ${num} jugadores`);
+
+  // Activar validación en tiempo real
+  activarValidacionTiempoReal();
+
+  // Disparar validación inicial para habilitar botón si todo está bien
+  validarJugadores();
 }
 
 // Función para actualizar la bandera usando FlagsAPI
@@ -276,4 +332,91 @@ function actualizarBandera(jugadorNum) {
       flagPlaceholder.textContent = '🏳️';
     }
   }
+}
+
+// ===== VALIDACIONES =====
+function recolectarJugadores() {
+  const numJugadores = parseInt(document.getElementById('numJugadores').value, 10);
+  const jugadores = [];
+  for (let i = 1; i <= numJugadores; i++) {
+    const countryCode = (document.getElementById(`pais${i}`).value || '').trim();
+    jugadores.push({
+      nickname: (document.getElementById(`nickname${i}`).value || '').trim(),
+      pais: countryCode.toUpperCase(),
+      country_code: countryCode.toLowerCase(),
+      color: document.getElementById(`color${i}`).value,
+      ficha: document.getElementById(`ficha${i}`).value
+    });
+  }
+  return { jugadores, numJugadores };
+}
+
+function validarJugadores() {
+  const { jugadores, numJugadores } = recolectarJugadores();
+  const errores = [];
+  const usadosNick = new Set();
+  const usadosColor = new Set();
+  const usadosFicha = new Set();
+
+  jugadores.forEach((j, idx) => {
+    const n = idx + 1;
+    if (!j.nickname) errores.push(`Jugador ${n}: Nickname vacío`);
+    else if (j.nickname.length < 2) errores.push(`Jugador ${n}: Nickname mínimo 2 caracteres`);
+    else if (usadosNick.has(j.nickname.toLowerCase())) errores.push(`Jugador ${n}: Nickname repetido`);
+    usadosNick.add(j.nickname.toLowerCase());
+
+    if (!j.pais) errores.push(`Jugador ${n}: País no seleccionado`);
+
+    if (!j.color) errores.push(`Jugador ${n}: Color no seleccionado`);
+    else if (usadosColor.has(j.color)) errores.push(`Jugador ${n}: Color repetido`);
+    usadosColor.add(j.color);
+
+    if (!j.ficha) errores.push(`Jugador ${n}: Ficha no seleccionada`);
+    else if (usadosFicha.has(j.ficha)) errores.push(`Jugador ${n}: Ficha repetida`);
+    usadosFicha.add(j.ficha);
+  });
+
+  if (numJugadores < 2 || numJugadores > 4) errores.push('Número de jugadores inválido');
+
+  const ok = errores.length === 0;
+  // Habilitar/Inhabilitar botón iniciar
+  const btnIniciar = document.getElementById('btnIniciar');
+  if (btnIniciar) btnIniciar.disabled = !ok;
+  return { ok, errores };
+}
+
+function mostrarErroresJugadores(lista) {
+  const alertBox = document.getElementById('alertErroresJugadores');
+  const ul = document.getElementById('listaErroresJugadores');
+  if (!alertBox || !ul) return;
+  ul.innerHTML = '';
+  lista.forEach(err => {
+    const li = document.createElement('li');
+    li.textContent = err;
+    ul.appendChild(li);
+  });
+  alertBox.classList.remove('d-none');
+}
+
+function ocultarErroresJugadores() {
+  const alertBox = document.getElementById('alertErroresJugadores');
+  const ul = document.getElementById('listaErroresJugadores');
+  if (alertBox) alertBox.classList.add('d-none');
+  if (ul) ul.innerHTML = '';
+}
+
+function activarValidacionTiempoReal() {
+  const campos = document.querySelectorAll('#nicknamesContainer .campo-jugador');
+  campos.forEach(campo => {
+    campo.addEventListener('input', () => {
+      validarJugadores();
+    });
+    campo.addEventListener('change', () => {
+      if (campo.dataset.tipo === 'pais') {
+        const id = campo.id.replace('pais','');
+        actualizarBandera(id);
+      }
+      validarJugadores();
+    });
+  });
 }

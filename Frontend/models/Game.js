@@ -84,7 +84,9 @@ class Game {
                         nickname: jugadorData.nickname || `Jugador ${index + 1}`,
                         color: jugadorData.color || 'Rojo',
                         ficha: jugadorData.ficha || '🔴',
-                        pais: jugadorData.pais || 'XX',
+                        // Código de país (normalizado a mayúsculas) necesario para el backend y banderas
+                        pais: (jugadorData.pais || jugadorData.country_code || 'XX').toUpperCase(),
+                        country_code: (jugadorData.country_code || jugadorData.pais || 'XX').toLowerCase(),
                         position: 0, // Todos empiezan en casilla 0 (SALIDA)
                         dinero: 1500,
                         propiedades: [],
@@ -1781,7 +1783,8 @@ class Game {
                 const body = {
                     nick_name: resultado.jugador.nickname || resultado.jugador.ficha,
                     score: resultado.patrimonio,
-                    country_code: resultado.jugador.country_code || "co" // Por defecto Colombia
+                    // Asegurar que enviamos un código válido (fallback 'co')
+                    country_code: (resultado.jugador.country_code || resultado.jugador.pais || 'co').toString().toLowerCase()
                 };
 
                 console.log(`📤 Enviando puntaje de ${body.nick_name}: $${body.score}`);
@@ -1827,7 +1830,7 @@ class Game {
                     nickname: r.jugador.nickname,
                     ficha: r.jugador.ficha,
                     patrimonio: r.patrimonio,
-                    country_code: r.jugador.country_code || "co"
+                    country_code: (r.jugador.country_code || r.jugador.pais || "co").toString().toLowerCase()
                 }))
             };
             

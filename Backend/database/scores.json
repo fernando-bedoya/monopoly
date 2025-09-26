@@ -10,5 +10,9 @@
     "Pedro pony ": {
         "score": 1500,
         "country_code": "co"
+    },
+    "Jugador2": {
+        "score": 1700,
+        "country_code": "ae"
     }
 }
