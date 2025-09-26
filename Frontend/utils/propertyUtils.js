@@ -38,21 +38,50 @@ export function mortgageValue(prop) { return Number(prop?.mortgage || 0); }
 export function unmortgageCost(prop) { const m = mortgageValue(prop); return Math.ceil(m * 1.10); }
 export function buildCosts() { return { house: 100, hotel: 250 }; }
 
-export function canBuildOnProperty(prop, groupProps, ownerId) {
-  if (!prop || prop.type !== "property") return { ok: false, reason: "No es edificable" };
+// utils/propertyUtils.js
+// utils/propertyUtils.js
+// utils/propertyUtils.js
+export function canBuildOnProperty(
+  prop,
+  groupProps,
+  ownerId,
+  { forAction = "house", enforceEvenBuild = false } = {}
+) {
+  if (!prop || prop.type !== "property") return { ok: false, reason: "No edificable" };
   if (prop.ownerId !== ownerId) return { ok: false, reason: "No eres el propietario" };
   if (prop.isMortgaged) return { ok: false, reason: "La propiedad está hipotecada" };
-  const sameOwner = (groupProps || []).every(p => p.ownerId === ownerId && !p.isMortgaged);
-  if (!sameOwner) return { ok: false, reason: "No posees el grupo completo" };
-  const houses = (groupProps || []).map(p => Number(p.houses || 0));
-  const minH = Math.min(...houses);
-  const maxH = Math.max(...houses);
-  if ((Number(prop.houses || 0) > minH) || (maxH - minH > 1)) {
-    return { ok: false, reason: "Debes construir parejo en el grupo" };
+
+  const ownsAll = Array.isArray(groupProps) && groupProps.length > 0 &&
+    groupProps.every(p => p.ownerId === ownerId && !p.isMortgaged);
+  if (!ownsAll) return { ok: false, reason: "No posees el grupo completo" };
+
+  // (Opcional) modo clásico parejo
+  if (enforceEvenBuild) {
+    const counts = (groupProps || []).map(p => Number(p.houses || 0));
+    const min = Math.min(...counts);
+    const max = Math.max(...counts);
+    if (forAction === "house") {
+      if (Number(prop.houses || 0) > min) return { ok: false, reason: "Debes construir parejo en el grupo (clásico)" };
+      if (max - min > 1) return { ok: false, reason: "La diferencia de casas del grupo no puede ser > 1 (clásico)" };
+    } else if (forAction === "hotel") {
+      const allFour = (groupProps || []).every(p => Number(p.houses || 0) === 4);
+      if (!allFour) return { ok: false, reason: "Para hotel (clásico) todas deben tener 4 casas" };
+    }
   }
-  if (prop.hotel) return { ok: false, reason: "Ya tiene hotel" };
+
+  if (forAction === "house") {
+    if (prop.hotel) return { ok: false, reason: "Ya tiene hotel" };
+    if (Number(prop.houses || 0) >= 4) return { ok: false, reason: "Máximo de casas alcanzado" };
+  } else if (forAction === "hotel") {
+    if (prop.hotel) return { ok: false, reason: "Ya tiene hotel" };
+    if (Number(prop.houses || 0) < 4) return { ok: false, reason: "Necesitas 4 casas antes del hotel" };
+  }
+
   return { ok: true };
 }
+
+
+
 
 export function rentForRailroads(ownedCount) {
   if (ownedCount <= 1) return 25;

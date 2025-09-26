@@ -71,3 +71,54 @@ export async function setOwnerForGroup(prop, ownerId) {
   }
   return count;
 }
+
+// === Servicios de construcción (casas/hotel) ===
+// Requiere que la instancia 'property' sea de class Property (models/property.js)
+// y que 'player' tenga payMoney(monto) o al menos un campo 'dinero' o 'money'.
+
+export async function buildHouseService(property, player, { enforceEvenBuild = false } = {}) {
+  if (!property || !player) return { ok: false, reason: "Faltan datos" };
+
+  // Pasamos el dinero disponible para validar fondos
+  const ownerMoney = typeof player.dinero === "number"
+    ? player.dinero
+    : (typeof player.money === "number" ? player.money : undefined);
+
+  const res = await property.buildHouse(ownerMoney, { enforceEvenBuild });
+  if (!res?.ok) return res;
+
+  // Descontar saldo
+  if (typeof player.payMoney === "function") {
+    player.payMoney(res.price);
+  } else if (typeof player.dinero === "number") {
+    player.dinero -= res.price;
+  } else if (typeof player.money === "number") {
+    player.money -= res.price;
+  }
+
+  // Reflejar cambios en el cache del tablero
+  updatePropertyInCache(property);
+  return res;
+}
+
+export async function buildHotelService(property, player, { enforceEvenBuild = false } = {}) {
+  if (!property || !player) return { ok: false, reason: "Faltan datos" };
+
+  const ownerMoney = typeof player.dinero === "number"
+    ? player.dinero
+    : (typeof player.money === "number" ? player.money : undefined);
+
+  const res = await property.buildHotel(ownerMoney, { enforceEvenBuild });
+  if (!res?.ok) return res;
+
+  if (typeof player.payMoney === "function") {
+    player.payMoney(res.price);
+  } else if (typeof player.dinero === "number") {
+    player.dinero -= res.price;
+  } else if (typeof player.money === "number") {
+    player.money -= res.price;
+  }
+
+  updatePropertyInCache(property);
+  return res;
+}
