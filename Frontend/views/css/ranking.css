@@ -1,5 +1,15 @@
 @import 'minty.css';
 @import 'style.css';
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+
+#titleRanking {
+    font-family: 'Press Start 2P', cursive;
+    color: rgb(240, 237, 238);        /* Cambia el color de la letra */
+    font-size: 36px;       /* Tamaño de fuente */
+    text-align: center;    /* Alineación */
+    font-weight: bold;     /* Negrita */
+}
 
 .ranking-container {
             max-width: 900px;

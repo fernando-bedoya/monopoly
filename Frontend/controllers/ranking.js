@@ -2,176 +2,186 @@
  * Servicio para manejo del ranking de jugadores
  * Incluye funciones para obtener y mostrar el ranking desde el backend
  */
+        let rankingData = [];
 
-class RankingService {
-    constructor() {
-        this.baseUrl = 'http://127.0.0.1:5000';
-    }
+        /**
+         * Carga el ranking desde el API
+         */
+        async function cargarRanking() {
+            mostrarLoading();
+            
+            try {
+                console.log('🔄 Cargando ranking desde el API...');
+                
+                const response = await fetch('http://127.0.0.1:5000/ranking', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
 
-    /**
-     * Obtiene el ranking desde el backend
-     * @returns {Promise<Array>} Lista de jugadores ordenada por puntaje
-     */
-    async obtenerRanking() {
-        try {
-            const response = await fetch(`${this.baseUrl}/ranking`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                console.log('✅ Ranking cargado exitosamente:', data);
+                
+                rankingData = Array.isArray(data) ? data : [];
+                mostrarRanking(rankingData);
+                
+            } catch (error) {
+                console.error('❌ Error al cargar ranking:', error);
+                mostrarError(error.message);
+            }
+        }
+
+        /**
+         * Muestra el estado de loading
+         */
+        function mostrarLoading() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('rankingTable').style.display = 'none';
+            document.getElementById('emptyMessage').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+        }
+
+        /**
+         * Muestra mensaje de error
+         */
+        function mostrarError(mensaje) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('rankingTable').style.display = 'none';
+            document.getElementById('emptyMessage').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+            
+            document.getElementById('errorDetails').textContent = mensaje;
+        }
+
+        /**
+         * Muestra el ranking en la tabla
+         */
+        function mostrarRanking(data) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            if (!data || data.length === 0) {
+                document.getElementById('emptyMessage').style.display = 'block';
+                document.getElementById('rankingTable').style.display = 'none';
+                document.getElementById('statsContainer').style.display = 'none';
+                return;
             }
 
-            const data = await response.json();
-            return Array.isArray(data) ? data : [];
-        } catch (error) {
-            console.error('❌ Error al obtener ranking:', error);
-            throw error;
-        }
-    }
+            // Mostrar estadísticas
+            mostrarEstadisticas(data);
+            
+            // Mostrar tabla
+            document.getElementById('rankingTable').style.display = 'block';
+            document.getElementById('emptyMessage').style.display = 'none';
+            
+            const tbody = document.getElementById('rankingTableBody');
+            tbody.innerHTML = '';
 
-    /**
-     * Envía un puntaje al backend
-     * @param {string} nickname - Nombre del jugador
-     * @param {number} score - Puntaje obtenido
-     * @param {string} countryCode - Código del país (ej: 'co', 'us', 'es')
-     * @returns {Promise<Object>} Respuesta del servidor
-     */
-    async enviarPuntaje(nickname, score, countryCode = 'co') {
-        try {
-            const body = {
-                nick_name: nickname,
-                score: score,
-                country_code: countryCode.toLowerCase()
-            };
-
-            console.log(`📤 Enviando puntaje: ${nickname} - $${score} (${countryCode})`);
-
-            const response = await fetch(`${this.baseUrl}/score-recorder`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body)
+            data.forEach((jugador, index) => {
+                const position = index + 1;
+                const row = crearFilaRanking(jugador, position);
+                tbody.appendChild(row);
             });
+        }
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        /**
+         * Crea una fila de la tabla de ranking
+         */
+        function crearFilaRanking(jugador, position) {
+            const row = document.createElement('tr');
+            row.className = 'ranking-row';
+
+            // Columna de posición
+            const positionCell = document.createElement('td');
+            positionCell.className = `ranking-position position-${position <= 3 ? position : ''}`;
+            
+            let emoji = '';
+            if (position === 1) emoji = '🥇';
+            else if (position === 2) emoji = '🥈';
+            else if (position === 3) emoji = '🥉';
+            else emoji = position;
+            
+            positionCell.textContent = emoji;
+
+            // Columna de jugador
+            const playerCell = document.createElement('td');
+            playerCell.innerHTML = `
+                <div class="player-info">
+                    <strong>${jugador.nick_name || 'Jugador Anónimo'}</strong>
+                </div>
+            `;
+
+            // Columna de país con bandera
+            const countryCell = document.createElement('td');
+            countryCell.className = 'text-center';
+            const countryCode = jugador.country_code || 'co';
+            countryCell.innerHTML = `
+                <div class="player-info justify-content-center">
+                    <img src="https://flagsapi.com/${countryCode.toUpperCase()}/flat/32.png" 
+                         alt="${countryCode}" class="flag-img" 
+                         onerror="this.src='https://flagsapi.com/CO/flat/32.png'">
+                    <span>${countryCode.toUpperCase()}</span>
+                </div>
+            `;
+
+            // Columna de puntaje
+            const scoreCell = document.createElement('td');
+            scoreCell.className = 'text-end';
+            scoreCell.innerHTML = `<span class="score-badge">${jugador.score?.toLocaleString() || '0'}</span>`;
+
+            row.appendChild(positionCell);
+            row.appendChild(playerCell);
+            row.appendChild(countryCell);
+            row.appendChild(scoreCell);
+
+            return row;
+        }
+
+        /**
+         * Muestra estadísticas generales
+         */
+        function mostrarEstadisticas(data) {
+            const totalPlayers = data.length;
+            const highestScore = Math.max(...data.map(j => j.score || 0));
+            const countries = [...new Set(data.map(j => j.country_code || 'co'))];
+            const totalCountries = countries.length;
+
+            document.getElementById('totalPlayers').textContent = totalPlayers;
+            document.getElementById('highestScore').textContent = highestScore.toLocaleString();
+            document.getElementById('totalCountries').textContent = totalCountries;
+            document.getElementById('statsContainer').style.display = 'grid';
+        }
+
+        /**
+         * Función para refrescar el ranking cada 30 segundos
+         */
+        function iniciarRefrescoAutomatico() {
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('🔄 Refrescando ranking automáticamente...');
+                    cargarRanking();
+                }
+            }, 30000); // 30 segundos
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎮 Página de ranking cargada');
+            cargarRanking();
+            iniciarRefrescoAutomatico();
+        });
+
+        // Manejar tecla F5 o Ctrl+R para refrescar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                cargarRanking();
             }
-
-            const data = await response.json();
-            console.log(`✅ Puntaje enviado exitosamente para ${nickname}:`, data);
-            return data;
-        } catch (error) {
-            console.error('❌ Error al enviar puntaje:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Envía múltiples puntajes al backend
-     * @param {Array} jugadores - Array de objetos con {nickname, score, countryCode}
-     * @returns {Promise<boolean>} true si todos se enviaron correctamente
-     */
-    async enviarMultiplesPuntajes(jugadores) {
-        try {
-            const promesas = jugadores.map(jugador => 
-                this.enviarPuntaje(jugador.nickname, jugador.score, jugador.countryCode)
-            );
-
-            await Promise.all(promesas);
-            console.log('🎉 Todos los puntajes enviados exitosamente');
-            return true;
-        } catch (error) {
-            console.error('❌ Error al enviar múltiples puntajes:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Obtiene la URL de la bandera de un país
-     * @param {string} countryCode - Código del país
-     * @param {string} size - Tamaño de la bandera ('flat' por defecto)
-     * @param {number} resolution - Resolución (32, 64, etc.)
-     * @returns {string} URL de la bandera
-     */
-    obtenerUrlBandera(countryCode, size = 'flat', resolution = 32) {
-        return `https://flagsapi.com/${countryCode.toUpperCase()}/${size}/${resolution}.png`;
-    }
-
-    /**
-     * Formatea un puntaje con separadores de miles
-     * @param {number} score - Puntaje a formatear
-     * @returns {string} Puntaje formateado
-     */
-    formatearPuntaje(score) {
-        return new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(score);
-    }
-
-    /**
-     * Guarda puntajes localmente como respaldo
-     * @param {Array} jugadores - Array de jugadores con puntajes
-     */
-    guardarRankingLocal(jugadores) {
-        try {
-            const rankingLocal = {
-                fecha: new Date().toISOString(),
-                jugadores: jugadores
-            };
-            localStorage.setItem('rankingBackup', JSON.stringify(rankingLocal));
-            console.log('💾 Ranking guardado localmente como respaldo');
-        } catch (error) {
-            console.error('❌ Error al guardar ranking local:', error);
-        }
-    }
-
-    /**
-     * Obtiene el ranking local guardado
-     * @returns {Array} Ranking local o array vacío
-     */
-    obtenerRankingLocal() {
-        try {
-            const ranking = localStorage.getItem('rankingBackup');
-            if (ranking) {
-                const data = JSON.parse(ranking);
-                return data.jugadores || [];
-            }
-        } catch (error) {
-            console.error('❌ Error al obtener ranking local:', error);
-        }
-        return [];
-    }
-
-    /**
-     * Verifica si el backend está disponible
-     * @returns {Promise<boolean>} true si el backend responde
-     */
-    async verificarConexionBackend() {
-        try {
-            const response = await fetch(`${this.baseUrl}/ranking`, {
-                method: 'GET',
-                timeout: 5000
-            });
-            return response.ok;
-        } catch (error) {
-            return false;
-        }
-    }
-}
-
-// Crear instancia global del servicio
-const rankingService = new RankingService();
-
-// Exportar para uso en módulos ES6
-export default rankingService;
-
-// También hacer disponible globalmente para scripts no-module
-window.rankingService = rankingService;
+        });
