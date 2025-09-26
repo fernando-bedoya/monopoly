@@ -134,7 +134,7 @@
             // Columna de puntaje
             const scoreCell = document.createElement('td');
             scoreCell.className = 'text-end';
-            scoreCell.innerHTML = `<span class="score-badge">$${jugador.score?.toLocaleString() || '0'}</span>`;
+            scoreCell.innerHTML = `<span class="score-badge">${jugador.score?.toLocaleString() || '0'}</span>`;
 
             row.appendChild(positionCell);
             row.appendChild(playerCell);
@@ -154,7 +154,7 @@
             const totalCountries = countries.length;
 
             document.getElementById('totalPlayers').textContent = totalPlayers;
-            document.getElementById('highestScore').textContent = '$' + highestScore.toLocaleString();
+            document.getElementById('highestScore').textContent = highestScore.toLocaleString();
             document.getElementById('totalCountries').textContent = totalCountries;
             document.getElementById('statsContainer').style.display = 'grid';
         }
