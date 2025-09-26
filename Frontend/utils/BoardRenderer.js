@@ -745,9 +745,4 @@ class BoardRenderer {
     }
 }
 
-// Exportar para uso en otros archivos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BoardRenderer };
-} else if (typeof window !== 'undefined') {
-    window.MonopolyBoardRenderer = { BoardRenderer };
-}
+export default BoardRenderer;

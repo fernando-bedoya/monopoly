@@ -1,12 +1,68 @@
-// game.js - Lógica principal del juego Monopoly
+import Board from './Board.js';
+import Square from './Square.js'; // no lo usamos directo, pero queda listo
+import BoardRenderer from '../utils/BoardRenderer.js';
+import BoardUtils from '../utils/BoardUtils.js';
 
-// Variables globales
-let board = null;
-let renderer = null;
-let currentLanguage = 'es';
-let playerCounter = 0;
-let currentPlayer = null;
-const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
+class Game {
+    constructor(containerId = '#boardContainer') {
+        this.containerId = containerId;
+        this.board = null;
+        this.renderer = null;
+        this.currentLanguage = 'es';
+    }
+
+    async initialize(totalSquares = 40) {
+        try {
+            // Crear el tablero
+            this.board = new Board();
+
+            // Generar datos de prueba con BoardUtils
+            const testData = BoardUtils.generateTestBoardData(totalSquares, this.currentLanguage);
+
+            // Validar
+            const validation = BoardUtils.validateBoardData(testData);
+            if (!validation.valid) {
+                throw new Error(validation.error);
+            }
+
+            // Cargar datos en el tablero
+            this.board.loadSquares(testData);
+            this.board.organizeSquares();
+
+            // Crear el renderer
+            this.renderer = new BoardRenderer(this.containerId, this.board, {
+                totalSquares: totalSquares,
+                language: this.currentLanguage,
+                boardSize: Math.min(800, window.innerWidth - 40),
+                cornerSize: 100,
+                sideSquareWidth: 70,
+                sideSquareHeight: 100
+            });
+
+            console.log("🔄 Renderizando tablero con", totalSquares, "casillas...");
+
+            await this.renderer.render();
+
+            console.log("✅ Tablero renderizado correctamente");
+
+        } catch (error) {
+            console.error('❌ Error inicializando el juego:', error);
+        }
+    }
+}
+
+// Inicialización automática al cargar la página
+document.addEventListener('DOMContentLoaded', async () => {
+    const game = new Game('#boardContainer');
+    await game.initialize(40); // por defecto 40 casillas
+    window.game = game; // para inspeccionar desde consola
+});
+
+
+
+export default Game;
+
+/*
 
 // Inicialización cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async function() {
@@ -16,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 /**
  * Inicializa el juego
- */
+ 
 async function initializeGame() {
     try {
         // Verificar que las clases necesarias estén disponibles
@@ -69,7 +125,7 @@ async function initializeGame() {
 
 /**
  * Genera un tablero de prueba
- */
+ 
 async function generateTestBoard(totalSquares) {
     try {
         // Generar datos de prueba
@@ -115,7 +171,7 @@ async function generateTestBoard(totalSquares) {
 
 /**
  * Configura los event listeners
- */
+ 
 function setupEventListeners() {
     // Botones de generación
     document.getElementById('btnGenerate40').addEventListener('click', () => generateTestBoard(40));
@@ -158,7 +214,7 @@ function setupEventListeners() {
 
 /**
  * Cambia el idioma del juego
- */
+ 
 function changeLanguage() {
     currentLanguage = currentLanguage === 'es' ? 'en' : 'es';
     const langButton = document.getElementById('btnChangeLanguage');
@@ -175,7 +231,7 @@ function changeLanguage() {
 
 /**
  * Agrega un jugador genérico
- */
+ 
 function addPlayer() {
     playerCounter++;
     const playerId = `player${playerCounter}`;
@@ -202,7 +258,7 @@ function addPlayer() {
 
 /**
  * Agrega un jugador con datos específicos
- */
+ 
 function addPlayerWithData(nickname, color, ficha, pais) {
     playerCounter++;
     const playerId = `player${playerCounter}`;
@@ -233,7 +289,7 @@ function addPlayerWithData(nickname, color, ficha, pais) {
 
 /**
  * Resetea el juego
- */
+ 
 function resetGame() {
     if (renderer) {
         renderer.players.clear();
@@ -253,7 +309,7 @@ function resetGame() {
 
 /**
  * Maneja clics en casillas del tablero
- */
+ 
 function handleSquareClick(event) {
     const { square, position } = event.detail;
     log(`Clic en: ${square.name} (Posición ${position})`);
@@ -267,21 +323,21 @@ function handleSquareClick(event) {
 
 /**
  * Actualiza la información del tablero
- */
+ 
 function updateBoardInfo(totalSquares) {
     document.getElementById('totalSquares').textContent = totalSquares;
 }
 
 /**
  * Actualiza el contador de jugadores
- */
+ 
 function updatePlayerCount() {
     document.getElementById('playerCount').textContent = playerCounter;
 }
 
 /**
  * Actualiza la información del jugador actual
- */
+ 
 function updatePlayerInfo(playerData) {
     const playerInfoContainer = document.getElementById('playerInfo');
     if (!playerInfoContainer) return;
@@ -318,7 +374,7 @@ function updatePlayerInfo(playerData) {
 
 /**
  * Agrega un mensaje al log del juego
- */
+ 
 function log(message) {
     const gameLog = document.getElementById('gameLog');
     const timestamp = new Date().toLocaleTimeString();
@@ -526,4 +582,4 @@ window.addEventListener('resize', () => {
         const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
         generateTestBoard(currentTotal);
     }
-});
+});*/

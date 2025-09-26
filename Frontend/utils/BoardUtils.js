@@ -394,9 +394,4 @@ const smallBoard = BoardUtils.generateTestBoardData(12, 'en');
 console.log('Tablero pequeño:', smallBoard);
 */
 
-// Exportar para uso en otros módulos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = BoardUtils;
-} else if (typeof window !== 'undefined') {
-    window.BoardUtils = BoardUtils;
-}
+export default BoardUtils;
