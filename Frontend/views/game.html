@@ -8,28 +8,41 @@
     <link rel="stylesheet" href="/views/css/style.css">
     <link rel="stylesheet" href="/views/css/cartas.css">
     <link rel="stylesheet" href="/views/css/dice.css">
+    <link rel="stylesheet" href="/views/css/ui-enhancements.css">
 
 
 </head>
 
 <body>
 
+    <!-- Contenedor dinámico de notificaciones -->
+    <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
     <div class="main-container">
         <header class="controls">
-            <h1>Tablero de Monopoly - Prueba</h1>
-            <div class="control-buttons">
-                <button id="btnGenerate40">Generar 40 Casillas</button>
-                <button id="btnGenerate28">Generar 28 Casillas</button>
-                <button id="btnGenerate16">Generar 16 Casillas</button>
-                <button id="btnChangeLanguage">Cambiar Idioma (EN)</button>
-                <button id="btnAddPlayer">Agregar Jugador</button>
-                <button id="btnReset">Resetear</button>
-            </div>
+            <h1>Tablero de Monopoly - Fernando</h1>
             <div class="info-panel">
                 <div id="boardInfo" class="board-info">
                     <p>Casillas totales: <span id="totalSquares">0</span></p>
                     <p>Idioma actual: <span id="currentLanguage">Español</span></p>
                     <p>Jugadores: <span id="playerCount">0</span></p>
+                </div>
+                <!-- Panel dinámico de estadísticas del jugador -->
+                <div id="playerStatsPanel" class="player-stats-panel">
+                    <div class="player-current">
+                        <h4>Jugador Actual</h4>
+                        <p><strong>Nombre:</strong> <span id="ps-nombre">-</span></p>
+                        <p><strong>País:</strong> <span id="ps-pais">-</span></p>
+                        <p><strong>Dinero:</strong> $<span id="ps-dinero">0</span></p>
+                        <p><strong>Posición:</strong> <span id="ps-posicion">0</span></p>
+                        <p><strong>Propiedades:</strong> <span id="ps-propiedades">0</span></p>
+                        <p><strong>Hipotecadas:</strong> <span id="ps-hipotecadas">0</span></p>
+                        <p><strong>En Cárcel:</strong> <span id="ps-carcel">No</span></p>
+                    </div>
+                    <div class="players-summary">
+                        <h5>Resumen Jugadores</h5>
+                        <ul id="ps-resumen" class="resumen-list"></ul>
+                    </div>
                 </div>
             </div>
         </header>
@@ -55,16 +68,16 @@
                     <span id="dados-resultado">🎲🎲</span> Lanzar Dados
                 </button>
                 <div class="d-grid gap-2 w-100" id="acciones-casilla">
-                    <button class="btn btn-success" id="btnComprarPropiedad" disabled>Comprar Propiedad</button>
-                    <button class="btn btn-warning" id="btnPagarRenta" disabled>Pagar Renta</button>
-                    <button class="btn btn-info" id="btnConstruirCasa" disabled>Construir Casa</button>
-                    <button class="btn btn-info" id="btnConstruirHotel" disabled>Construir Hotel</button>
-                    <button class="btn btn-secondary" id="btnHipotecar" disabled>Hipotecar Propiedad</button>
-                    <button class="btn btn-secondary" id="btnDeshipotecar" disabled>Deshipotecar Propiedad</button>
-                    <button class="btn btn-outline-primary" id="btnCartaSorpresa" disabled>Carta Sorpresa</button>
-                    <button class="btn btn-outline-primary" id="btnCajaComunidad" disabled>Caja de Comunidad</button>
-                    <button class="btn btn-danger" id="btnPagarImpuesto" disabled>Pagar Impuesto</button>
-                    <button class="btn btn-dark" id="btnIrCarcel" disabled>Ir a Cárcel / Pagar Salida</button>
+                    <button class="btn btn-success" id="btnComprarPropiedad">Comprar Propiedad</button>
+                    <button class="btn btn-warning" id="btnPagarRenta">Pagar Renta</button>
+                    <button class="btn btn-info" id="btnConstruirCasa">Construir Casa</button>
+                    <button class="btn btn-info" id="btnConstruirHotel">Construir Hotel</button>
+                    <button class="btn btn-secondary" id="btnHipotecar">Hipotecar Propiedad</button>
+                    <button class="btn btn-secondary" id="btnDeshipotecar">Deshipotecar Propiedad</button>
+                    <button class="btn btn-outline-primary" id="btnCartaSorpresa">Carta Sorpresa</button>
+                    <button class="btn btn-outline-primary" id="btnCajaComunidad">Caja de Comunidad</button>
+                    <button class="btn btn-danger" id="btnPagarImpuesto">Pagar Impuesto</button>
+                    <button class="btn btn-dark" id="btnIrCarcel">Pagar Salida de la Carcel</button>
                     <button class="btn btn-outline-success" id="btnFinalizarJuego">Finalizar Juego</button>
                 </div>
                 <hr class="my-3 w-100">
@@ -74,19 +87,8 @@
 
 
         <footer class="game-controls">
-            <div class="player-actions">
-                <h3>Acciones de Jugador</h3>
-                <button id="btnMovePlayer">Mover Jugador</button>
-                <button id="btnBuyProperty">Comprar Propiedad</button>
-                <button id="btnBuildHouse">Construir Casa</button>
-                <button id="btnMortgage">Hipotecar</button>
-            </div>
-            <div class="game-info">
-                <h3>Información del Juego</h3>
-                <div id="gameLog" class="game-log">
-                    <p>Listo para comenzar...</p>
-                </div>
-            </div>
+            <p>&copy; 2024 Monopoly Online. Todos los derechos reservados.</p>
+            <p>Desarrollado por David Fernando Bedoya Ramírez</p>
         </footer>
     </div>
 

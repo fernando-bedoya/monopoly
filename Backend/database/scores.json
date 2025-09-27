@@ -12,7 +12,11 @@
         "country_code": "co"
     },
     "Jugador2": {
-        "score": 1700,
+        "score": 4700,
         "country_code": "ae"
+    },
+    "Jugador1": {
+        "score": 3000,
+        "country_code": "ad"
     }
 }

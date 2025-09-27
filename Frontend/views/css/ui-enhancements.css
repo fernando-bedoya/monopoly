@@ -1,0 +1,38 @@
+/* Estilos extraídos desde game.html (panel de estadísticas y toasts) */
+.player-stats-panel {background:linear-gradient(135deg,#ffffff 0%,#f1f5f9 100%);border:1px solid #dbe2ea;padding:14px 18px;border-radius:14px;display:flex;gap:28px;align-items:flex-start;margin-top:12px;position:relative;overflow:hidden}
+.player-stats-panel:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(0,123,255,0.15),transparent 60%);pointer-events:none}
+.player-current h4{font-size:15px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:0 0 6px;color:#0d6efd;display:flex;align-items:center;gap:6px}
+.player-current p{margin:2px 0;font-size:13px;display:flex;justify-content:space-between;font-family:system-ui,Segoe UI,Roboto,sans-serif;color:#334155}
+.player-current p strong{font-weight:600;color:#1e293b}
+.players-summary h5{margin:0 0 6px;font-size:13px;font-weight:600;color:#475569;letter-spacing:.5px;text-transform:uppercase}
+.players-summary ul{list-style:none;margin:0;padding:0;max-height:150px;overflow:auto;scrollbar-width:thin}
+.players-summary li{display:grid;grid-template-columns:18px 1fr auto auto auto;gap:6px;align-items:center;padding:4px 6px;border-radius:6px;font-size:12px;font-weight:500;color:#475569;transition:background .2s}
+.players-summary li:hover{background:#e2e8f0}
+.players-summary .ps-active{color:#0d6efd;font-weight:700}
+.ps-token{width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.1)}
+.stat-badge{display:inline-block;background:#0d6efd;color:#fff;font-size:11px;padding:2px 6px;border-radius:20px;font-weight:600;box-shadow:0 2px 4px rgba(13,110,253,.3)}
+.player-stats-panel .money{font-weight:700;color:#16a34a}
+.player-stats-panel .danger{color:#dc2626;font-weight:600}
+.player-stats-panel .warning{color:#d97706;font-weight:600}
+@media (max-width:900px){.player-stats-panel{flex-direction:column}}
+
+/* Toast / Notificaciones ligeras */
+#toastContainer {position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:10px;z-index:9999;max-width:340px;font-family:system-ui,Segoe UI,Roboto,sans-serif}
+.toast-msg {display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:10px;background:#fff;box-shadow:0 4px 14px -2px rgba(0,0,0,.18),0 2px 4px -1px rgba(0,0,0,.08);border-left:5px solid transparent;animation:toastIn .35s ease;position:relative;overflow:hidden}
+.toast-msg.fade-out {opacity:0;transform:translateX(40px);transition:all .35s ease}
+.toast-icon {font-size:20px;line-height:1}
+.toast-content {flex:1;min-width:0}
+.toast-title {margin:0;font-size:13px;font-weight:600;letter-spacing:.3px;color:#1e293b}
+.toast-text {margin:2px 0 0;font-size:12px;line-height:1.3;color:#475569;word-break:break-word}
+.toast-close {background:transparent;border:none;color:#64748b;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;border-radius:4px}
+.toast-close:hover {background:#f1f5f9;color:#0f172a}
+.toast-success {border-left-color:#16a34a}
+.toast-success .toast-icon {color:#16a34a}
+.toast-info {border-left-color:#0d6efd}
+.toast-info .toast-icon {color:#0d6efd}
+.toast-warning {border-left-color:#d97706}
+.toast-warning .toast-icon {color:#d97706}
+.toast-error {border-left-color:#dc2626}
+.toast-error .toast-icon {color:#dc2626}
+@keyframes toastIn {from {opacity:0;transform:translateX(40px)} to {opacity:1;transform:translateX(0)}}
+@media (max-width:640px){#toastContainer{left:12px;right:12px;bottom:12px;max-width:none}}

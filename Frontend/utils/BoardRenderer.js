@@ -844,14 +844,54 @@ class BoardRenderer {
     }
 
     onSquareHover(square, element) {
-        // Mostrar información adicional en hover
+        // Evitar duplicados
+        const previo = document.querySelector('.square-tooltip');
+        if (previo) previo.remove();
+
         const tooltip = this.createTooltip(square);
         document.body.appendChild(tooltip);
-        
-        element.addEventListener('mousemove', (e) => {
-            tooltip.style.left = (e.clientX + 10) + 'px';
-            tooltip.style.top = (e.clientY + 10) + 'px';
-        });
+
+        const posicionar = (clientX, clientY) => {
+            const rect = element.getBoundingClientRect();
+            // Posición base: debajo de la casilla
+            let left = rect.left + window.scrollX + rect.width / 2 + 8;
+            let top = rect.top + window.scrollY + rect.height + 8; // debajo
+
+            // Si el mouse está muy abajo/arriba usamos su posición como guía
+            if (clientX !== undefined && clientY !== undefined) {
+                left = clientX + 14;
+                top = clientY + 14;
+            }
+
+            // Ajustes para que no se salga de la pantalla
+            const tw = tooltip.offsetWidth;
+            const th = tooltip.offsetHeight;
+            const vw = window.innerWidth + window.scrollX;
+            const vh = window.innerHeight + window.scrollY;
+
+            if (left + tw + 8 > vw) left = vw - tw - 8;
+            if (top + th + 8 > vh) top = rect.top + window.scrollY - th - 8; // colocar arriba si no cabe abajo
+            if (top < window.scrollY) top = window.scrollY + 8; // mínimo visible
+            if (left < window.scrollX) left = window.scrollX + 8;
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        };
+
+        // Inicial
+        posicionar();
+        let lastMove = 0;
+        const moveHandler = (e) => {
+            // Throttle ligero
+            const now = performance.now();
+            if (now - lastMove < 16) return; // ~60fps
+            lastMove = now;
+            posicionar(e.clientX + window.scrollX, e.clientY + window.scrollY);
+        };
+        element.addEventListener('mousemove', moveHandler);
+        element.addEventListener('mouseleave', () => {
+            element.removeEventListener('mousemove', moveHandler);
+        }, { once: true });
     }
 
     onSquareLeave(square, element) {
@@ -870,26 +910,81 @@ class BoardRenderer {
         tooltip.className = 'square-tooltip';
         tooltip.style.cssText = `
             position: absolute;
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 8px;
             font-size: 12px;
-            max-width: 200px;
+            line-height: 1.35;
+            box-shadow: 0 6px 16px -4px rgba(0,0,0,.4),0 2px 6px -2px rgba(0,0,0,.3);
+            max-width: 220px;
             z-index: 1000;
             pointer-events: none;
+            border:1px solid #1e293b;
+            backdrop-filter: blur(2px);
+            transform-origin: top left;
+            animation: fadeInTooltip .18s ease;
         `;
 
-        let content = `<strong>${square.name}</strong><br>`;
-        
+        // Animación CSS (solo se define una vez si no existe)
+        if (!document.getElementById('tooltip-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'tooltip-keyframes';
+            style.textContent = `@keyframes fadeInTooltip{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}`;
+            document.head.appendChild(style);
+        }
+
+        const fmtMoney = (v) => (v || v === 0) ? `$${v}` : '-';
+        let content = `<strong style="font-size:13px;">${square.name}</strong>`;
+
         if (square.isProperty() || square.isRailroad()) {
-            content += `${this.t('price')}: $${square.price}<br>`;
+            content += `<div style="margin-top:4px;">Precio: <strong>${fmtMoney(square.price)}</strong></div>`;
+            if (square.color) {
+                content += `<div>Color: <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${square.color};vertical-align:middle;margin-right:4px;"></span>${square.color}</div>`;
+            }
             if (square.owner) {
-                content += `${this.t('owned')} ${square.owner}<br>`;
+                content += `<div>Dueño: <strong>${square.owner}</strong></div>`;
+            } else {
+                content += `<div style="color:#38bdf8;">Libre</div>`;
             }
             if (square.isMortgaged) {
-                content += `<span style="color: #ff5252">${this.t('mortgaged')}</span><br>`;
+                content += `<div style="color:#f87171;">Hipotecada</div>`;
             }
+
+            // Detalles de renta si es propiedad estándar
+            if (square.isProperty() && square.rent) {
+                const r = square.rent;
+                const actual = square.getCurrentRent ? square.getCurrentRent() : r.base;
+                content += `<hr style="border:none;border-top:1px solid #1e293b;margin:6px 0;"/>`;
+                content += `<div style="font-weight:600;margin-bottom:3px;">Rentas</div>`;
+                content += `<div style="display:flex;justify-content:space-between;">Base <span>${fmtMoney(r.base)}</span></div>`;
+                if (Array.isArray(r.withHouse)) {
+                    r.withHouse.forEach((val, idx) => {
+                        content += `<div style="display:flex;justify-content:space-between;">${idx+1} casa${idx? 's':''} <span>${fmtMoney(val)}</span></div>`;
+                    });
+                }
+                if (r.withHotel !== undefined) {
+                    content += `<div style="display:flex;justify-content:space-between;">Hotel <span>${fmtMoney(r.withHotel)}</span></div>`;
+                }
+                content += `<div style="margin-top:4px;">Renta actual: <strong>${fmtMoney(actual)}</strong></div>`;
+                if (square.houses>0) {
+                    content += `<div>Casas construidas: ${square.houses}</div>`;
+                }
+                if (square.hasHotel) {
+                    content += `<div>Hotel construido</div>`;
+                }
+            }
+
+            // Ferrocarril (mostrar renta base y nota)
+            if (square.isRailroad()) {
+                const renta = square.getCurrentRent ? square.getCurrentRent() : square.rent;
+                content += `<div>Renta base: <strong>${fmtMoney(renta)}</strong></div>`;
+                content += `<div style="font-size:11px;color:#94a3b8;">(Aumenta según ferrocarriles del dueño)</div>`;
+            }
+        } else if (square.isTax && square.isTax()) {
+            content += `<div>Tipo: Impuesto</div>`;
+        } else if (square.isCard && square.isCard()) {
+            content += `<div>Casilla de cartas</div>`;
         }
 
         tooltip.innerHTML = content;
