@@ -626,9 +626,17 @@ class Game {
             // REGLA: Solo se puede comprar si está disponible y tiene dinero
             await this.ofrecerCompraPropiedad(player, square);
         } else if (propietario.id === player.id || propietario.nickname === player.nickname) {
-            // Propiedad propia - Solo mostrar info, construcción se maneja por botones
-            this.mostrarMensaje(player, '🏠 Tu Propiedad', 
-                `${square.name} es tuya. Usa los botones para construir.`);
+            // Propiedad propia - Mostrar mensaje apropiado según el tipo
+            if (square.type === 'railroad') {
+                this.mostrarMensaje(player, '🚂 Tu Ferrocarril', 
+                    `${square.name} es tuyo. Los ferrocarriles generan más renta con más ferrocarriles.`);
+            } else if (square.type === 'utility') {
+                this.mostrarMensaje(player, '⚡ Tu Servicio', 
+                    `${square.name} es tuyo. Los servicios generan más renta con más servicios.`);
+            } else {
+                this.mostrarMensaje(player, '🏠 Tu Propiedad', 
+                    `${square.name} es tuya. Usa los botones para construir.`);
+            }
         } else {
             // REGLA: Pago automático de renta
             await this.pagarRentaAutomatica(player, propietario, square);
@@ -825,12 +833,6 @@ class Game {
      * Ofrece construcción de casas/hoteles
      */
     async ofrecerConstruccion(player, square) {
-        // Verificar si ya hay una construcción en progreso
-        if (this.actionInProgress) {
-            console.log('⚠️ Construcción ya en progreso, omitiendo...');
-            return;
-        }
-        
         const propiedad = player.propiedades.find(p => p.id === square.id);
         
         // Verificar que la propiedad no esté hipotecada
@@ -921,6 +923,11 @@ class Game {
      * Verifica si el jugador puede construir (debe tener todas las propiedades del color)
      */
     puedeConstructor(player, square) {
+        // Solo se puede construir en propiedades normales, NO en ferrocarriles o servicios
+        if (square?.type !== 'property') {
+            return false;
+        }
+        
         if (!square?.color) return false;
         // Usar squaresByPosition (array) porque squares es un Map
         const todas = this.board.squaresByPosition.filter(sq => sq && sq.type === 'property' && sq.color === square.color);
@@ -2359,13 +2366,14 @@ class Game {
         if (!btnCasa || !btnHotel) return;
 
         const propiedad = player.propiedades?.find(p => p.id === square.id);
-        const monopolio = square.color && this.tieneMonopolioColor(propiedad, square.color, player);
+        // Usar puedeConstructor que ya tiene toda la lógica de validación
+        const tieneMonopolio = this.puedeConstructor(player, square);
         
         // REGLA: Solo se puede construir con monopolio, sin hipotecar, con dinero
-        let puedeConstructCasa = propiedad && monopolio && !propiedad.hipotecada && 
+        let puedeConstructCasa = propiedad && tieneMonopolio && !propiedad.hipotecada && 
                                 propiedad.casas < 4 && !propiedad.hotel && player.dinero >= 100;
         
-        let puedeConstructHotel = propiedad && monopolio && !propiedad.hipotecada && 
+        let puedeConstructHotel = propiedad && tieneMonopolio && !propiedad.hipotecada && 
                                  propiedad.casas === 4 && !propiedad.hotel && player.dinero >= 250;
 
         // REGLA: Construcción equilibrada
@@ -2392,7 +2400,7 @@ class Game {
         if (!puedeConstructCasa) {
             if (!propiedad) {
                 btnCasa.dataset.disableReason = 'No es tu propiedad.';
-            } else if (!monopolio) {
+            } else if (!tieneMonopolio) {
                 btnCasa.dataset.disableReason = 'Necesitas monopolio del color.';
             } else if (propiedad.hipotecada) {
                 btnCasa.dataset.disableReason = 'Propiedad hipotecada.';
@@ -2647,22 +2655,21 @@ class Game {
                 this.notifyInfo('Límite alcanzado', 'Ya tienes 4 casas. Construye un hotel.');
                 return;
             }
-            // Validar monopolio
-        if (square.color) {
-            const propiedadesColorJugador = currentPlayer.propiedades.filter(p => p.color === square.color);
-            const totalColorTablero = (this.board.propertiesByColor?.get(square.color) || []).length;
-            if (propiedadesColorJugador.length !== totalColorTablero) {
+            // Validar monopolio usando la misma lógica que en configurarBotonesConstruccion
+            if (!this.puedeConstructor(currentPlayer, square)) {
                 this.notifyWarn('Sin monopolio', 'Necesitas todas las propiedades de este color para construir.');
                 return;
             }
+            
             // Validar regla de construcción equilibrada
-            const { estado, min, max } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
-            const propEstado = estado.find(e => e.id === square.id);
-            if (propEstado && propEstado.casas > min && max - min > 0 && propEstado.casas >= max) {
-                this.notifyWarn('Construcción desbalanceada', `Debes construir primero en propiedades con menos casas (mínimo actual: ${min}).`);
-                return;
+            if (square.color) {
+                const { estado, min, max } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
+                const propEstado = estado.find(e => e.id === square.id);
+                if (propEstado && propEstado.casas > min && max - min > 0 && propEstado.casas >= max) {
+                    this.notifyWarn('Construcción desbalanceada', `Debes construir primero en propiedades con menos casas (mínimo actual: ${min}).`);
+                    return;
+                }
             }
-        }
         this.ofrecerConstruccion(currentPlayer, square);
         } finally {
             // Liberar el lock de acción
@@ -2674,50 +2681,63 @@ class Game {
      * Ejecuta la construcción de un hotel
      */
     ejecutarAccionConstruirHotel() {
-        const currentPlayer = this.players[this.currentPlayerIndex];
-        if (!currentPlayer) {
-            this.notifyError('Sin jugador activo', 'No hay jugador para construir hotel.');
+        // Evitar múltiples ejecuciones simultáneas
+        if (this.actionInProgress) {
+            console.log('⚠️ Acción ya en progreso, ignorando click duplicado');
             return;
         }
-        if (currentPlayer.estaEnCarcel) {
-            this.notifyWarn('Acción bloqueada', 'No puedes construir en la cárcel.');
-            return;
-        }
-        const position = currentPlayer.position || 0;
-        const square = this.board.getSquareByPosition ? this.board.getSquareByPosition(position) : this.board.squares[position];
-        const propiedad = currentPlayer.propiedades?.find(p => p.id === square.id);
-        if (!square || !propiedad) {
-            this.notifyWarn('No es tu propiedad', 'Solo puedes construir en una propiedad tuya.');
-            return;
-        }
-        if (propiedad.hipotecada) {
-            this.notifyWarn('Hipotecada', 'No puedes construir sobre una propiedad hipotecada.');
-            return;
-        }
-        if (propiedad.hotel) {
-            this.notifyInfo('Hotel existente', 'Ya existe un hotel.');
-            return;
-        }
-        if (propiedad.casas !== 4) {
-            this.notifyWarn('Requisito casas', 'Necesitas exactamente 4 casas antes del hotel.');
-            return;
-        }
-        if (square.color) {
-            const propiedadesColorJugador = currentPlayer.propiedades.filter(p => p.color === square.color);
-            const totalColorTablero = (this.board.propertiesByColor?.get(square.color) || []).length;
-            if (propiedadesColorJugador.length !== totalColorTablero) {
+        
+        this.actionInProgress = true;
+        
+        try {
+            const currentPlayer = this.players[this.currentPlayerIndex];
+            if (!currentPlayer) {
+                this.notifyError('Sin jugador activo', 'No hay jugador para construir hotel.');
+                return;
+            }
+            if (currentPlayer.estaEnCarcel) {
+                this.notifyWarn('Acción bloqueada', 'No puedes construir en la cárcel.');
+                return;
+            }
+            const position = currentPlayer.position || 0;
+            const square = this.board.getSquareByPosition ? this.board.getSquareByPosition(position) : this.board.squares[position];
+            const propiedad = currentPlayer.propiedades?.find(p => p.id === square.id);
+            if (!square || !propiedad) {
+                this.notifyWarn('No es tu propiedad', 'Solo puedes construir en una propiedad tuya.');
+                return;
+            }
+            if (propiedad.hipotecada) {
+                this.notifyWarn('Hipotecada', 'No puedes construir sobre una propiedad hipotecada.');
+                return;
+            }
+            if (propiedad.hotel) {
+                this.notifyInfo('Hotel existente', 'Ya existe un hotel.');
+                return;
+            }
+            if (propiedad.casas !== 4) {
+                this.notifyWarn('Requisito casas', 'Necesitas exactamente 4 casas antes del hotel.');
+                return;
+            }
+            // Validar monopolio usando la misma lógica consistente
+            if (!this.puedeConstructor(currentPlayer, square)) {
                 this.notifyWarn('Sin monopolio', 'Necesitas todas las propiedades de este color.');
                 return;
             }
+            
             // Validar que las demás propiedades del grupo estén también con 4 casas (regla antes de hotel)
-            const { estado } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
-            const faltantes = estado.filter(e => e.id !== square.id && !e.hotel && e.casas < 4);
-            if (faltantes.length) {
-                this.notifyWarn('Construcción inválida', 'Necesitas 4 casas en cada propiedad del color antes de un hotel.');
-                return;
+            if (square.color) {
+                const { estado } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
+                const faltantes = estado.filter(e => e.id !== square.id && !e.hotel && e.casas < 4);
+                if (faltantes.length) {
+                    this.notifyWarn('Construcción inválida', 'Necesitas 4 casas en cada propiedad del color antes de un hotel.');
+                    return;
+                }
             }
+            this.ofrecerConstruccion(currentPlayer, square);
+        } finally {
+            // Liberar el lock de acción
+            this.actionInProgress = false;
         }
-        this.ofrecerConstruccion(currentPlayer, square);
     }
 
     /**
