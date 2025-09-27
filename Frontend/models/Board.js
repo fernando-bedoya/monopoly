@@ -47,6 +47,21 @@ class Board {
 
         console.log('📦 Cargando casillas del backend...');
         
+        // Cargar cartas del backend si están disponibles, sino usar fallback
+        this.chanceCards = boardData.chance || this.getFallbackChanceCards();
+        this.communityCards = boardData.community_chest || this.getFallbackCommunityCards();
+        
+        console.log(`🃏 Cartas de Suerte cargadas: ${this.chanceCards.length}`);
+        console.log(`📦 Cartas de Caja de Comunidad cargadas: ${this.communityCards.length}`);
+        
+        // Debug: mostrar primera carta de cada tipo
+        if (this.chanceCards.length > 0) {
+            console.log('🎯 Primera carta de Suerte:', this.chanceCards[0]);
+        }
+        if (this.communityCards.length > 0) {
+            console.log('🎯 Primera carta de Comunidad:', this.communityCards[0]);
+        }
+        
         // Mapear los datos incorrectos del backend al formato correcto del frontend
         const correctedData = this.correctBackendData(boardData);
         
@@ -294,6 +309,102 @@ class Board {
             railroads: this.railroads,
             specialSquares: Object.fromEntries(this.specialSquares)
         };
+    }
+
+    /**
+     * Cartas de Suerte de fallback desde el JSON proporcionado
+     */
+    getFallbackChanceCards() {
+        return [
+            {
+                "id": 1,
+                "description": "Recibe $150 por ganar la lotería",
+                "type": "chance",
+                "action": {
+                    "money": 150
+                }
+            },
+            {
+                "id": 2,
+                "description": "Paga $75 por multa de tráfico",
+                "type": "chance",
+                "action": {
+                    "money": -75
+                }
+            },
+            {
+                "id": 3,
+                "description": "Recibe $100 por devolución de impuestos",
+                "type": "chance",
+                "action": {
+                    "money": 100
+                }
+            },
+            {
+                "id": 4,
+                "description": "Paga $150 por gastos legales",
+                "type": "chance",
+                "action": {
+                    "money": -150
+                }
+            },
+            {
+                "id": 5,
+                "description": "Recibe $50 por un premio sorpresa",
+                "type": "chance",
+                "action": {
+                    "money": 50
+                }
+            }
+        ];
+    }
+
+    /**
+     * Cartas de Caja de Comunidad de fallback desde el JSON proporcionado
+     */
+    getFallbackCommunityCards() {
+        return [
+            {
+                "id": 1,
+                "description": "Recibe $100 por venta de acciones",
+                "type": "community_chest",
+                "action": {
+                    "money": 100
+                }
+            },
+            {
+                "id": 2,
+                "description": "Paga $50 por gastos médicos",
+                "type": "community_chest",
+                "action": {
+                    "money": -50
+                }
+            },
+            {
+                "id": 3,
+                "description": "Recibe $200 por herencia",
+                "type": "community_chest",
+                "action": {
+                    "money": 200
+                }
+            },
+            {
+                "id": 4,
+                "description": "Paga $100 por reparación de propiedades",
+                "type": "community_chest",
+                "action": {
+                    "money": -100
+                }
+            },
+            {
+                "id": 5,
+                "description": "Recibe $50 de reembolso de impuestos",
+                "type": "community_chest",
+                "action": {
+                    "money": 50
+                }
+            }
+        ];
     }
 }
 

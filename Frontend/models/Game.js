@@ -2,6 +2,7 @@ import Board from './Board.js';
 import Square from './SquareBase.js'; // no lo usamos directo, pero queda listo
 import BoardRenderer from '../utils/BoardRenderer.js';
 import BoardUtils from '../utils/BoardUtils.js';
+import GameRules from './GameRules.js';
 
 class Game {
     constructor(containerId = '#boardContainer') {
@@ -17,6 +18,7 @@ class Game {
         this.lastDiceRoll = null;
         this.testMode = false; // Para permitir valores manuales en dados
         this.playerStatsInitialized = false; // Control para panel de estadísticas
+        this.rules = null; // Sistema de reglas
     }
 
     async initialize(totalSquares = 40) {
@@ -59,10 +61,17 @@ class Game {
             // Inicializar y actualizar panel de estadísticas si existe en el DOM
             this.initPlayerStatsPanel();
             this.updatePlayerStatsPanel();
+            
+            // Inicializar sistema de reglas simple
+            this.rules = new GameRules(this);
+            
             // Reconfigurar botones (por si ahora no estaban disabled en el HTML)
             this.configurarEventosBotones();
             // Forzar una primera evaluación de disponibilidad
             this.actualizarEstadoBotones();
+
+            // Ocultar botones de cartas (ya no se usan manualmente)
+            ['btnCartaSorpresa','btnCajaComunidad'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
 
         } catch (error) {
             console.error('❌ Error inicializando el juego:', error);
@@ -130,6 +139,22 @@ class Game {
     loadPlayersFromStorage() {
         const jugadoresData = localStorage.getItem('jugadores');
         const numJugadores = localStorage.getItem('numJugadores');
+        const ensureJailAPI = (p) => {
+            if (typeof p.goToJail === 'function') return p; // ya tiene API
+            p.turnosCarcel = p.turnosCarcel ?? p.turnosEnCarcel ?? 0;
+            p.goToJail = function(){ this.estaEnCarcel = true; this.turnosCarcel = 0; };
+            p.leaveJail = function(){ this.estaEnCarcel = false; this.turnosCarcel = 0; };
+            p.incrementJailTurn = function(){ if (this.estaEnCarcel) this.turnosCarcel = (this.turnosCarcel||0)+1; return this.turnosCarcel; };
+            p.tryLeaveJail = function({ pay=false, cost=50, dice=null, maxTurns=3 }={}) {
+                if (!this.estaEnCarcel) return { freed:true, reason:null };
+                if (pay && (this.dinero||0) >= cost){ this.dinero-=cost; this.leaveJail(); return { freed:true, reason:'pay'}; }
+                if (dice?.isDouble){ this.leaveJail(); return { freed:true, reason:'double'}; }
+                const t = this.incrementJailTurn();
+                if (t>=maxTurns && (this.dinero||0) >= cost){ this.dinero-=cost; this.leaveJail(); return { freed:true, reason:'autoPay'}; }
+                return { freed:false, reason:null };
+            };
+            return p;
+        };
         
         if (jugadoresData && numJugadores) {
             try {
@@ -149,13 +174,13 @@ class Game {
                         // Código de país (normalizado a mayúsculas) necesario para el backend y banderas
                         pais: (jugadorData.pais || jugadorData.country_code || 'XX').toUpperCase(),
                         country_code: (jugadorData.country_code || jugadorData.pais || 'XX').toLowerCase(),
-                        position: 0, // Todos empiezan en casilla 0 (SALIDA)
+                        position: 0, // posición unificada
                         dinero: 1500,
                         propiedades: [],
                         estaEnCarcel: false
                     };
                     
-                    this.players.push(player);
+                    this.players.push(ensureJailAPI(player));
                 });
                 
                 this.gameStarted = true;
@@ -166,6 +191,7 @@ class Game {
                 // Esperar un poco para asegurar que el DOM esté completamente renderizado
                 setTimeout(() => {
                     this.renderPlayerTokens();
+                    try { this.sincronizarPropiedadesJugadorAlTablero(); } catch(e) { console.warn('Sin tablero aún para sincronizar owners'); }
                 }, 500);
                 
                 // Limpiar localStorage después de cargar
@@ -179,6 +205,7 @@ class Game {
         } else {
             console.log('ℹ️ No hay jugadores configurados en localStorage, creando jugadores de prueba...');
             this.createTestPlayers();
+            try { this.sincronizarPropiedadesJugadorAlTablero(); } catch(e) {}
         }
     }
 
@@ -232,7 +259,7 @@ class Game {
                 propiedades: [],
                 estaEnCarcel: false
             };
-            this.players.push(player);
+            this.players.push(ensureJailAPI(player));
         });
         
         this.gameStarted = true;
@@ -513,10 +540,36 @@ class Game {
      * Ejecuta la acción correspondiente según el tipo de casilla
      */
     async ejecutarAccionCasilla(player, position) {
-        const square = this.board.squares[position];
-        if (!square) return;
+        const square = this.board.squaresByPosition[position];
+        if (!square) {
+            console.error(`❌ No se encontró casilla en posición ${position}`);
+            return;
+        }
 
         console.log(`🎯 ${player.nickname} cayó en: ${square.name} (${square.type})`);
+
+        // Detección flexible por nombre/acción para adelantarse
+        const nombre = (square.name || '').toLowerCase();
+        
+        // Verificar casillas de cartas por tipo primero
+        if (square.type === 'chance') {
+            console.log('🃏 Detectada casilla de Suerte');
+            await this.manejarSuerte(player);
+            return;
+        }
+        
+        if (square.type === 'community_chest') {
+            console.log('📦 Detectada casilla de Caja de Comunidad');  
+            await this.manejarCajaComunidad(player);
+            return;
+        }
+        
+        if (square.type === 'special') {
+            if (square?.action?.goTo === 'jail' || /ve a .*c[áa]rcel/.test(nombre)) {
+                await this.sendToJail(player); return; }
+            if (/suerte/.test(nombre)) { await this.manejarSuerte(player); return; }
+            if (/caja de comunidad|community|comunidad/.test(nombre)) { await this.manejarCajaComunidad(player); return; }
+        }
 
         switch (square.type) {
             case 'property':
@@ -529,15 +582,10 @@ class Game {
                 await this.manejarServicio(player, square);
                 break;
             case 'community_chest':
-                // No tomar carta automáticamente para evitar doble efecto.
-                player.communityDrawn = false; // reiniciar bandera para este aterrizaje
-                this.mostrarMensaje(player, '📦 Caja de Comunidad', 'Pulsa el botón "Caja de Comunidad" para robar una carta.');
+                await this.manejarCajaComunidad(player);
                 break;
             case 'chance':
-                // Ya no robamos la carta automáticamente para evitar doble evento.
-                // Se habilita el botón "Carta Sorpresa" y el jugador debe pulsarlo.
-                player.chanceDrawn = false; // Reiniciar bandera para este aterrizaje
-                this.mostrarMensaje(player, '🃏 Suerte', 'Pulsa el botón "Carta Sorpresa" para robar una carta.');
+                await this.manejarSuerte(player);
                 break;
             case 'tax':
                 await this.manejarImpuesto(player, square);
@@ -567,21 +615,57 @@ class Game {
 
     /**
      * Maneja las acciones cuando un jugador cae en una propiedad
+     * REGLA: Pago automático de renta si no es del jugador
      */
     async manejarPropiedad(player, square) {
-        const propiedad = player.propiedades?.find(p => p.id === square.id);
         const propietario = this.players.find(p => p.propiedades?.some(prop => prop.id === square.id));
 
         if (!propietario) {
-            // Propiedad libre - Opción de comprar
+            // REGLA: Solo se puede comprar si está disponible y tiene dinero
             await this.ofrecerCompraPropiedad(player, square);
-        } else if (propietario.id === player.id) {
-            // Propiedad propia - Opción de construir
-            await this.ofrecerConstruccion(player, square);
+        } else if (propietario.id === player.id || propietario.nickname === player.nickname) {
+            // Propiedad propia - Solo mostrar info, construcción se maneja por botones
+            this.mostrarMensaje(player, '🏠 Tu Propiedad', 
+                `${square.name} es tuya. Usa los botones para construir.`);
         } else {
-            // Propiedad de otro jugador - Pagar renta
-            await this.pagarRenta(player, propietario, square);
+            // REGLA: Pago automático de renta
+            await this.pagarRentaAutomatica(player, propietario, square);
         }
+    }
+
+    /**
+     * Pago automático de renta - Se ejecuta sin intervención del jugador
+     */
+    async pagarRentaAutomatica(player, propietario, square) {
+        const propiedad = propietario.propiedades.find(p => p.id === square.id);
+        
+        // REGLA: No se paga renta en propiedades hipotecadas
+        if (propiedad.hipotecada) {
+            this.mostrarMensaje(player, '🏦 Propiedad Hipotecada', 
+                `${square.name} está hipotecada. No pagas renta.`);
+            return;
+        }
+
+        const renta = this.calcularRenta(propiedad, square);
+        
+        // REGLA: Si no puede pagar, bancarrota
+        if (player.dinero < renta) {
+            this.mostrarMensaje(player, '💥 BANCARROTA', 
+                `No puedes pagar $${renta} de renta. Has perdido el juego.`);
+            this.gestionarBancarrota(player);
+            return;
+        }
+
+        // Ejecutar pago automático
+        player.dinero -= renta;
+        propietario.dinero += renta;
+
+        const detalleMejoras = propiedad.hotel ? ' (hotel)' : (propiedad.casas > 0 ? ` (${propiedad.casas} casas)` : '');
+        this.mostrarMensaje(player, '💸 Renta Pagada Automáticamente', 
+            `Pagaste $${renta} a ${propietario.nickname} por ${square.name}${detalleMejoras}. Saldo: $${player.dinero}`);
+        
+        this.actualizarEstadoBotones();
+        this.updatePlayerStatsPanel();
     }
 
     /**
@@ -612,8 +696,15 @@ class Game {
                 color: square.color,
                 casas: 0,
                 hotel: false,
-                hipotecada: false
+                hipotecada: false,
+                rentData: square.rent || null,
+                mortgage: square.mortgage || Math.floor(precio/2)
             });
+
+            // Sincronizar dueño en la casilla real para cálculos de monopolio / ferrocarril
+            try {
+                square.owner = player.id || player.nickname;
+            } catch(e){ console.warn('No se pudo asignar owner a la casilla', e); }
 
             this.mostrarMensaje(player, '🏠 Propiedad Comprada', 
                 `¡Felicidades! Ahora eres dueño de ${square.name}. Dinero restante: $${player.dinero}`);
@@ -654,8 +745,9 @@ class Game {
         player.dinero -= renta;
         propietario.dinero += renta;
 
+        const detalleMejoras = propiedad.hotel ? ' (hotel)' : (propiedad.casas>0 ? ` (${propiedad.casas} casas)` : '');
         this.mostrarMensaje(player, '💸 Renta Pagada', 
-            `Pagaste $${renta} a ${propietario.nickname} por ${square.name}. Tu dinero: $${player.dinero}`);
+            `Pagaste $${renta} a ${propietario.nickname} por ${square.name}${detalleMejoras}. Saldo: $${player.dinero}`);
     // Actualizar botones tras pagar renta
     this.actualizarEstadoBotones();
     this.updatePlayerStatsPanel();
@@ -665,14 +757,43 @@ class Game {
      * Calcula la renta de una propiedad según casas/hoteles
      */
     calcularRenta(propiedad, square) {
-        const rentaBase = square.rent || 10;
-        
-        if (propiedad.hotel) {
-            return rentaBase * 5; // Hotel multiplica x5
-        } else if (propiedad.casas > 0) {
-            return rentaBase * (1 + propiedad.casas); // Cada casa multiplica la renta
+        // Estructura de rent en boardData puede ser:
+        // - Propiedades normales: { base, withHouse: [h1,h2,h3,h4], withHotel }
+        // - Ferrocarril: { "1":25, "2":50, "3":100, "4":200 }
+        // - Valor simple (fallback legacy)
+        const rentData = square.rent;
+
+        // Ferrocarriles
+        if (square.type === 'railroad' && rentData && typeof rentData === 'object') {
+            // Encontrar propietario real (el que contiene este id en sus propiedades)
+            const owner = this.players.find(p => p.propiedades?.some(pr => pr.id === square.id));
+            if (!owner) return 0;
+            const ownedRailroads = owner.propiedades.filter(pr => {
+                const sq = this.board.squares.get(pr.id);
+                return sq && sq.type === 'railroad';
+            }).length;
+            return rentData[String(ownedRailroads)] || 25;
         }
-        
+
+        // Propiedades normales
+        if (rentData && typeof rentData === 'object' && 'base' in rentData) {
+            // Hotel
+            if (propiedad.hotel) return rentData.withHotel || (rentData.base * 5);
+            // Casas
+            if (propiedad.casas > 0) {
+                const idx = propiedad.casas - 1; // 1..4 -> 0..3
+                const arr = rentData.withHouse || [];
+                return arr[idx] || (rentData.base * (1 + propiedad.casas));
+            }
+            // Sin casas: verificar monopolio (doble renta)
+            const monopolio = square.color && this.tieneMonopolioColor(propiedad, square.color, this.players.find(p=>p.propiedades?.some(pr=>pr.id===square.id)));
+            return monopolio ? rentData.base * 2 : rentData.base;
+        }
+
+        // Fallback legacy
+        const rentaBase = typeof rentData === 'number' ? rentData : (square.rent || 10);
+        if (propiedad.hotel) return rentaBase * 5;
+        if (propiedad.casas > 0) return rentaBase * (1 + propiedad.casas);
         return rentaBase;
     }
 
@@ -716,6 +837,18 @@ class Game {
             this.mostrarMensaje(player, '🏗️ No puedes construir', 
                 'Necesitas todas las propiedades del mismo color para construir.');
             return;
+        }
+
+        // Construcción equilibrada: diferencia max-min de casas <=1; no saltar propiedades
+        if (square.color) {
+            const { estado, min, max } = this.getEstadoGrupoConstruccion(square.color, player);
+            const propEstado = estado.find(e => e.id === square.id);
+            if (propiedad.hotel) {
+                // Nada - será validado abajo
+            } else if (propiedad.casas > min && max - min > 0 && propiedad.casas >= max) {
+                this.mostrarMensaje(player, '⚖️ Construcción Desbalanceada', `Debes construir primero en las propiedades con menos casas de este color (mínimo actual: ${min}).`);
+                return;
+            }
         }
 
         if (propiedad.hotel) {
@@ -774,86 +907,765 @@ class Game {
      * Verifica si el jugador puede construir (debe tener todas las propiedades del color)
      */
     puedeConstructor(player, square) {
-        const propiedadesDelColor = this.board.squares.filter(s => 
-            s.type === 'property' && s.color === square.color
-        );
-        
-        const propiedadesDelJugador = player.propiedades.filter(p => 
-            propiedadesDelColor.some(pc => pc.id === p.id)
-        );
-
-        return propiedadesDelJugador.length === propiedadesDelColor.length;
+        if (!square?.color) return false;
+        // Usar squaresByPosition (array) porque squares es un Map
+        const todas = this.board.squaresByPosition.filter(sq => sq && sq.type === 'property' && sq.color === square.color);
+        if (!todas.length) return false;
+        const idsColor = new Set(todas.map(sq=>sq.id));
+        const jugadorTiene = player.propiedades.filter(p => idsColor.has(p.id));
+        return jugadorTiene.length === idsColor.size;
     }
 
     /**
-     * Maneja cartas de Caja de Comunidad
+     * REGLA MONOPOLY: Verifica si un jugador tiene monopolio de un color
      */
-    async manejarCajaComunidad(player) {
-        const cartas = [
-            { texto: 'Recibe $200 por servicios médicos.', dinero: 200 },
-            { texto: 'Paga $100 por multa de estacionamiento.', dinero: -100 },
-            { texto: 'Recibe $50 por la venta de acciones.', dinero: 50 },
-            { texto: 'Paga $75 por reparaciones escolares.', dinero: -75 },
-            { texto: 'Recibe $100 por tu cumpleaños.', dinero: 100 },
-            { texto: 'Paga $50 por consulta médica.', dinero: -50 },
-            { texto: 'Recibe $25 por reembolso de impuestos.', dinero: 25 }
-        ];
-
-        const carta = cartas[Math.floor(Math.random() * cartas.length)];
-        player.dinero += carta.dinero;
-        player.communityDrawn = true; // bandera para este aterrizaje
-
-        this.mostrarMensaje(player, '📦 Caja de Comunidad', 
-            `${carta.texto} Tu dinero: $${player.dinero}`);
-        // Refrescar botones (por si cambia la posibilidad de pagar / construir)
-        this.actualizarEstadoBotones();
-        this.updatePlayerStatsPanel();
+    tieneMonopolioColor(propiedadActual, color, player) {
+        if (!color || !this.board.propertiesByColor) return false;
+        
+        const propiedadesDelColor = this.board.propertiesByColor.get(color) || [];
+        const propiedadesDelJugador = player.propiedades?.filter(p => p.color === color) || [];
+        
+        return propiedadesDelColor.length === propiedadesDelJugador.length;
     }
 
     /**
-     * Maneja cartas de Suerte
+     * REGLA MONOPOLY: Obtiene estado de construcción de un grupo para validar equilibrio
      */
-    async manejarSuerte(player) {
-        const cartas = [
-            { texto: 'Avanza hasta la SALIDA y recibe $200.', dinero: 200, mover: 0 },
-            { texto: 'Recibe $150 por ganar un concurso de belleza.', dinero: 150 },
-            { texto: 'Paga $15 por exceso de velocidad.', dinero: -15 },
-            { texto: 'Ve a la Cárcel directamente.', carcel: true },
-            { texto: 'Recibe $50 por dividendos de tus acciones.', dinero: 50 },
-            { texto: 'Paga $100 por reparaciones generales.', dinero: -100 },
-            { texto: 'Retrocede 3 casillas.', mover: -3 }
-        ];
+    getEstadoGrupoConstruccion(color, player) {
+        const propiedadesDelJugador = player.propiedades?.filter(p => p.color === color) || [];
+        
+        const estado = propiedadesDelJugador.map(p => ({
+            id: p.id,
+            casas: p.casas || 0,
+            hotel: p.hotel || false
+        }));
 
-        const carta = cartas[Math.floor(Math.random() * cartas.length)];
-        // Marcar que ya tomó carta en esta casilla de Suerte
-        player.chanceDrawn = true;
-        
-        if (carta.dinero) {
-            player.dinero += carta.dinero;
+        const casasPorPropiedad = estado.map(e => e.hotel ? 5 : e.casas);
+        const min = Math.min(...casasPorPropiedad);
+        const max = Math.max(...casasPorPropiedad);
+
+        return { estado, min, max };
+    }
+
+    /**
+     * REGLA MONOPOLY: Validación estricta para cualquier compra
+     */
+    validarCompraPropiedad(player, square) {
+        // Debe ser una propiedad
+        if (!['property', 'railroad', 'utility'].includes(square.type)) {
+            return { valida: false, razon: 'No es una propiedad comprable' };
         }
-        
-        if (carta.carcel) {
-            await this.enviarACarcel(player);
-            this.actualizarEstadoBotones();
-            this.updatePlayerStatsPanel();
-            return;
+
+        // Debe estar disponible
+        const propietario = this.players.find(p => p.propiedades?.some(prop => prop.id === square.id));
+        if (propietario) {
+            return { valida: false, razon: `Ya pertenece a ${propietario.nickname}` };
         }
-        
-        if (carta.mover !== undefined) {
-            if (carta.mover === 0) {
-                // Ir a SALIDA
-                this.movePlayerToken(player, 40 - player.position);
-            } else {
-                // Moverse hacia atrás
-                const newPos = Math.max(0, player.position + carta.mover);
-                this.movePlayerToken(player, carta.mover);
+
+        // Debe tener dinero suficiente
+        const precio = square.price || 100;
+        if (player.dinero < precio) {
+            return { valida: false, razon: `Dinero insuficiente. Necesitas $${precio}, tienes $${player.dinero}` };
+        }
+
+        // No puede estar en cárcel
+        if (player.estaEnCarcel) {
+            return { valida: false, razon: 'No puedes comprar mientras estés en la cárcel' };
+        }
+
+        return { valida: true, razon: null };
+    }
+
+    /**
+     * REGLA MONOPOLY: Validación estricta para construcción
+     */
+    validarConstruccion(player, square, tipo = 'casa') {
+        // Debe ser propietario
+        const propiedad = player.propiedades?.find(p => p.id === square.id);
+        if (!propiedad) {
+            return { valida: false, razon: 'No eres propietario de esta propiedad' };
+        }
+
+        // No puede estar hipotecada
+        if (propiedad.hipotecada) {
+            return { valida: false, razon: 'No puedes construir en propiedades hipotecadas' };
+        }
+
+        // No puede estar en cárcel
+        if (player.estaEnCarcel) {
+            return { valida: false, razon: 'No puedes construir mientras estés en la cárcel' };
+        }
+
+        // Debe tener monopolio
+        const tieneMonopolio = this.tieneMonopolioColor(propiedad, square.color, player);
+        if (!tieneMonopolio) {
+            return { valida: false, razon: 'Necesitas monopolio del color para construir' };
+        }
+
+        // Validaciones específicas por tipo
+        if (tipo === 'casa') {
+            const costo = 100;
+            if (player.dinero < costo) {
+                return { valida: false, razon: `Necesitas $${costo} para construir una casa` };
+            }
+
+            if (propiedad.hotel) {
+                return { valida: false, razon: 'Ya hay un hotel en esta propiedad' };
+            }
+
+            if (propiedad.casas >= 4) {
+                return { valida: false, razon: 'Máximo 4 casas por propiedad' };
+            }
+
+            // Validar construcción equilibrada
+            const { min, max } = this.getEstadoGrupoConstruccion(square.color, player);
+            if (propiedad.casas > min && (max - min) > 0) {
+                return { valida: false, razon: 'Debes construir de manera equilibrada (niveladas)' };
+            }
+
+        } else if (tipo === 'hotel') {
+            const costo = 250;
+            if (player.dinero < costo) {
+                return { valida: false, razon: `Necesitas $${costo} para construir un hotel` };
+            }
+
+            if (propiedad.hotel) {
+                return { valida: false, razon: 'Ya hay un hotel en esta propiedad' };
+            }
+
+            if (propiedad.casas < 4) {
+                return { valida: false, razon: 'Necesitas exactamente 4 casas para construir hotel' };
+            }
+
+            // Todas las propiedades del grupo deben tener 4 casas
+            const { estado } = this.getEstadoGrupoConstruccion(square.color, player);
+            const faltanCasas = estado.filter(e => e.id !== square.id && !e.hotel && e.casas < 4);
+            if (faltanCasas.length > 0) {
+                return { valida: false, razon: 'Todas las propiedades del grupo necesitan 4 casas antes del hotel' };
             }
         }
 
-        this.mostrarMensaje(player, '🃏 Suerte', 
-            `${carta.texto}${carta.dinero ? ` Tu dinero: $${player.dinero}` : ''}`);
+        return { valida: true, razon: null };
+    }
+
+    /**
+     * REGLA MONOPOLY: Validación estricta para hipotecas
+     */
+    validarHipoteca(player, square, tipo = 'hipotecar') {
+        const propiedad = player.propiedades?.find(p => p.id === square.id);
+        if (!propiedad) {
+            return { valida: false, razon: 'No eres propietario de esta propiedad' };
+        }
+
+        if (player.estaEnCarcel) {
+            return { valida: false, razon: 'No puedes manejar hipotecas mientras estés en la cárcel' };
+        }
+
+        if (tipo === 'hipotecar') {
+            if (propiedad.hipotecada) {
+                return { valida: false, razon: 'La propiedad ya está hipotecada' };
+            }
+
+            if (propiedad.casas > 0 || propiedad.hotel) {
+                return { valida: false, razon: 'Debes vender todas las construcciones antes de hipotecar' };
+            }
+
+        } else if (tipo === 'deshipotecar') {
+            if (!propiedad.hipotecada) {
+                return { valida: false, razon: 'La propiedad no está hipotecada' };
+            }
+
+            const valorHipoteca = square.mortgage || Math.floor((square.price || 100) / 2);
+            const costo = Math.ceil(valorHipoteca * 1.1);
+            
+            if (player.dinero < costo) {
+                return { valida: false, razon: `Necesitas $${costo} para deshipotecar (incluye 10% interés)` };
+            }
+        }
+
+        return { valida: true, razon: null };
+    }
+
+    /**
+     * REGLA MONOPOLY: Validación para salir de la cárcel
+     */
+    validarSalidaCarcel(player, metodo = 'pagar') {
+        if (!player.estaEnCarcel) {
+            return { valida: false, razon: 'No estás en la cárcel' };
+        }
+
+        if (metodo === 'pagar') {
+            const costo = 50;
+            if (player.dinero < costo) {
+                return { valida: false, razon: `Necesitas $${costo} para salir de la cárcel` };
+            }
+        } else if (metodo === 'dobles') {
+            const turnosEnCarcel = player.turnosEnCarcel || 0;
+            if (turnosEnCarcel >= 3) {
+                return { valida: false, razon: 'Has alcanzado el máximo de intentos, debes pagar' };
+            }
+        }
+
+        return { valida: true, razon: null };
+    }
+
+    /**
+     * REGLA MONOPOLY: Aplicar todas las validaciones antes de cualquier acción
+     */
+    aplicarReglasEstrictas() {
+        console.log('🎯 APLICANDO REGLAS ESTRICTAS DE MONOPOLY');
+        
+        // Interceptar todas las acciones de botones para validar
+        document.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button || button.disabled) return;
+
+            const currentPlayer = this.players[this.currentPlayerIndex];
+            if (!currentPlayer) return;
+
+            const square = this.board.squaresByPosition[currentPlayer.position || 0];
+            if (!square) return;
+
+            let validacion = { valida: true, razon: null };
+
+            // Validar según el botón presionado
+            switch(button.id) {
+                case 'btnComprarPropiedad':
+                    validacion = this.validarCompraPropiedad(currentPlayer, square);
+                    break;
+                case 'btnConstruirCasa':
+                    validacion = this.validarConstruccion(currentPlayer, square, 'casa');
+                    break;
+                case 'btnConstruirHotel':
+                    validacion = this.validarConstruccion(currentPlayer, square, 'hotel');
+                    break;
+                case 'btnHipotecar':
+                    validacion = this.validarHipoteca(currentPlayer, square, 'hipotecar');
+                    break;
+                case 'btnDeshipotecar':
+                    validacion = this.validarHipoteca(currentPlayer, square, 'deshipotecar');
+                    break;
+                case 'btnIrCarcel':
+                    if (currentPlayer.estaEnCarcel) {
+                        validacion = this.validarSalidaCarcel(currentPlayer, 'pagar');
+                    }
+                    break;
+            }
+
+            // Si no es válida, prevenir acción y mostrar razón
+            if (!validacion.valida) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`❌ REGLA VIOLADA: ${validacion.razon}`);
+                this.mostrarMensaje(`❌ ${validacion.razon}`, 'error');
+                return false;
+            }
+        }, true); // Captura en fase de captura para interceptar antes
+
+        console.log('✅ Reglas estrictas aplicadas');
+    }
+
+    /**
+     * REGLA MONOPOLY: Inicializar sistema de validación completo
+     */
+    inicializarSistemaReglas() {
+        console.log('🎯 Inicializando Sistema de Reglas Monopoly');
+        
+        // Aplicar interceptor de eventos para validaciones
+        this.aplicarReglasEstrictas();
+        
+        // Verificar integridad de datos del juego
+        this.verificarIntegridadJuego();
+        
+        console.log('✅ Sistema de reglas activo');
+    }
+
+    /**
+     * REGLA MONOPOLY: Verificar integridad de datos del juego
+     */
+    verificarIntegridadJuego() {
+        // Verificar sincronización de propiedades
+        this.players.forEach(player => {
+            if (player.propiedades) {
+                player.propiedades.forEach(prop => {
+                    const square = this.board.squares.get(prop.id);
+                    if (square && !square.owner) {
+                        console.log(`🔧 Sincronizando owner de ${square.name} a ${player.nickname}`);
+                        square.owner = player.id;
+                    }
+                });
+            }
+        });
+
+        // Verificar posiciones de jugadores
+        this.players.forEach(player => {
+            if (typeof player.position !== 'number' || player.position < 0 || player.position >= 40) {
+                console.log(`🔧 Corrigiendo posición inválida de ${player.nickname}`);
+                player.position = 0;
+            }
+        });
+    }
+
+    /**
+     * Obtiene estado de construcción del grupo de color para validar construcción equilibrada
+     */
+    getEstadoGrupoConstruccion(color, player) {
+        const grupoSquares = this.board.propertiesByColor?.get(color) || [];
+        const estado = grupoSquares.map(sq => {
+            const prop = player.propiedades?.find(p => p.id === sq.id);
+            return {
+                id: sq.id,
+                nombre: sq.name,
+                casas: prop?.casas || 0,
+                hotel: !!prop?.hotel,
+                hipotecada: !!prop?.hipotecada
+            };
+        });
+        const casasValores = estado.filter(e=>!e.hotel).map(e=>e.casas);
+        const min = casasValores.length ? Math.min(...casasValores) : 0;
+        const max = casasValores.length ? Math.max(...casasValores) : 0;
+        const todas4 = estado.every(e => e.hotel || e.casas === 4);
+        return { estado, min, max, todas4 };
+    }
+
+    /** Sincroniza owner en cada casilla según las propiedades guardadas en los jugadores (útil tras cargar storage) */
+    sincronizarPropiedadesJugadorAlTablero() {
+        if (!this.board?.squaresByPosition?.length) return;
+        this.board.squaresByPosition.forEach(sq => { if (sq) delete sq.owner; });
+        this.players.forEach(pl => {
+            (pl.propiedades||[]).forEach(prop => {
+                const sq = this.board.squaresByPosition.find(s=>s && s.id === prop.id);
+                if (sq) sq.owner = pl.id || pl.nickname;
+            });
+        });
+    }
+
+    /**
+     * Maneja cartas de Caja de Comunidad automáticamente usando las cartas del backend
+     */
+    async manejarCajaComunidad(player) {
+        console.log('📦 Manejando carta de Caja de Comunidad para:', player.nickname);
+        
+        // Obtener cartas de caja de comunidad del board
+        const cartasComunidad = this.board.communityCards || [];
+        
+        if (!cartasComunidad.length) {
+            console.warn('⚠️ No hay cartas de Caja de Comunidad disponibles en el board');
+            this.mostrarMensaje(player, '📦 Caja de Comunidad', 'No hay cartas disponibles.');
+            return;
+        }
+
+        // Seleccionar carta aleatoria
+        const cartaIndex = Math.floor(Math.random() * cartasComunidad.length);
+        const carta = cartasComunidad[cartaIndex];
+        
+        console.log('🎯 Carta seleccionada:', carta);
+
+        // Marcar que ya tomó carta en esta casilla
+        player.communityDrawn = true;
+        
+        // Procesar la acción de la carta
+        if (carta.action) {
+            await this.procesarAccionCarta(player, carta, 'Caja de Comunidad');
+        }
+
+        // Mostrar mensaje de la carta con estilo bonito
+        this.mostrarCartaBonita('📦 Caja de Comunidad', carta.description || 'Carta procesada', carta.action);
+        
+        // Actualizar UI
         this.actualizarEstadoBotones();
         this.updatePlayerStatsPanel();
+    }
+
+    /**
+     * Maneja cartas de Suerte automáticamente usando las cartas del backend
+     */
+    async manejarSuerte(player) {
+        console.log('🃏 === INICIANDO MANEJO DE CARTA DE SUERTE ===');
+        console.log('🃏 Jugador:', player.nickname);
+        console.log('🃏 Board existe:', !!this.board);
+        console.log('🃏 chanceCards existe:', !!this.board?.chanceCards);
+        console.log('🃏 Número de cartas:', this.board?.chanceCards?.length || 0);
+        
+        // Obtener cartas de suerte del board
+        const cartasSuerte = this.board?.chanceCards || [];
+        
+        if (!cartasSuerte.length) {
+            console.error('❌ No hay cartas de Suerte disponibles en el board');
+            alert('❌ No hay cartas de Suerte disponibles');
+            return;
+        }
+
+        // Seleccionar carta aleatoria
+        const cartaIndex = Math.floor(Math.random() * cartasSuerte.length);
+        const carta = cartasSuerte[cartaIndex];
+        
+        console.log('🎯 Carta seleccionada (índice ' + cartaIndex + '):', carta);
+
+        // Marcar que ya tomó carta en esta casilla
+        player.chanceDrawn = true;
+        
+        // Procesar la acción de la carta
+        if (carta.action) {
+            console.log('⚡ Procesando acción de carta:', carta.action);
+            await this.procesarAccionCarta(player, carta, 'Suerte');
+        } else {
+            console.warn('⚠️ Carta sin acción:', carta);
+        }
+
+        // Mostrar mensaje de la carta con estilo bonito
+        const mensaje = carta.description || 'Carta procesada';
+        console.log('💬 Mostrando mensaje:', mensaje);
+        this.mostrarCartaBonita('🃏 Carta de Suerte', mensaje, carta.action);
+        
+        // Actualizar UI
+        this.actualizarEstadoBotones();
+        this.updatePlayerStatsPanel();
+        
+        console.log('🃏 === MANEJO DE CARTA COMPLETADO ===');
+    }
+
+    /**
+     * MÉTODO DE DEBUG - Forzar carta de suerte para pruebas
+     * Ejecuta desde la consola: game.debugForzarCartaSuerte()
+     */
+    debugForzarCartaSuerte() {
+        console.log('🧪 DEBUG: Forzando carta de suerte...');
+        const currentPlayer = this.players[this.currentPlayerIndex];
+        if (!currentPlayer) {
+            console.error('❌ No hay jugador activo');
+            return;
+        }
+        this.manejarSuerte(currentPlayer);
+    }
+
+    /**
+     * MÉTODO DE DEBUG - Forzar carta de comunidad para pruebas
+     * Ejecuta desde la consola: game.debugForzarCartaComunidad()
+     */
+    debugForzarCartaComunidad() {
+        console.log('🧪 DEBUG: Forzando carta de comunidad...');
+        const currentPlayer = this.players[this.currentPlayerIndex];
+        if (!currentPlayer) {
+            console.error('❌ No hay jugador activo');
+            return;
+        }
+        this.manejarCajaComunidad(currentPlayer);
+    }
+
+    /**
+     * Muestra una carta con un diseño bonito y animado
+     */
+    mostrarCartaBonita(titulo, descripcion, accion) {
+        // Eliminar modal existente si hay uno
+        const existingModal = document.getElementById('cartaModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Determinar colores según el tipo de carta
+        const esSuerte = titulo.includes('Suerte');
+        const colores = esSuerte 
+            ? { bg: 'linear-gradient(135deg, #FF6B6B, #FF8E8E)', icon: '🃏', accent: '#FF4757' }
+            : { bg: 'linear-gradient(135deg, #4ECDC4, #45B7AF)', icon: '📦', accent: '#00CEC9' };
+
+        // Determinar el efecto del dinero
+        let efectoDinero = '';
+        if (accion && accion.money !== undefined) {
+            const cantidad = accion.money;
+            const esPositivo = cantidad > 0;
+            efectoDinero = `
+                <div class="dinero-efecto ${esPositivo ? 'positivo' : 'negativo'}">
+                    ${esPositivo ? '💰 +' : '💸 -'}$${Math.abs(cantidad)}
+                </div>
+            `;
+        }
+
+        // Crear el modal
+        const modal = document.createElement('div');
+        modal.id = 'cartaModal';
+        modal.innerHTML = `
+            <div class="carta-overlay" onclick="this.parentElement.remove()">
+                <div class="carta-modal" onclick="event.stopPropagation()">
+                    <div class="carta-header" style="background: ${colores.bg}">
+                        <span class="carta-icon">${colores.icon}</span>
+                        <h2 class="carta-titulo">${titulo}</h2>
+                        <button class="carta-cerrar" onclick="this.closest('#cartaModal').remove()">×</button>
+                    </div>
+                    <div class="carta-body">
+                        <div class="carta-descripcion">
+                            ${descripcion}
+                        </div>
+                        ${efectoDinero}
+                        <div class="carta-decoracion">
+                            <div class="carta-esquina carta-esquina-1"></div>
+                            <div class="carta-esquina carta-esquina-2"></div>
+                            <div class="carta-esquina carta-esquina-3"></div>
+                            <div class="carta-esquina carta-esquina-4"></div>
+                        </div>
+                    </div>
+                    <div class="carta-footer">
+                        <button class="carta-btn-ok" onclick="this.closest('#cartaModal').remove()" 
+                                style="background: ${colores.accent}">
+                            ✨ ¡Entendido!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Agregar estilos CSS
+        const estilos = document.createElement('style');
+        estilos.textContent = `
+            .carta-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(5px);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                animation: aparecer 0.3s ease-out;
+            }
+
+            .carta-modal {
+                background: white;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 400px;
+                width: 90%;
+                animation: deslizar 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                position: relative;
+            }
+
+            .carta-header {
+                padding: 25px;
+                text-align: center;
+                color: white;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .carta-header::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+                animation: rotar 20s linear infinite;
+            }
+
+            .carta-icon {
+                font-size: 48px;
+                display: block;
+                margin-bottom: 10px;
+                animation: rebote 2s ease-in-out infinite;
+            }
+
+            .carta-titulo {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                position: relative;
+                z-index: 1;
+            }
+
+            .carta-cerrar {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: white;
+                font-size: 24px;
+                width: 35px;
+                height: 35px;
+                border-radius: 50%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+
+            .carta-cerrar:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: scale(1.1);
+            }
+
+            .carta-body {
+                padding: 30px;
+                text-align: center;
+                position: relative;
+                background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            }
+
+            .carta-descripcion {
+                font-size: 18px;
+                color: #2c3e50;
+                line-height: 1.6;
+                margin-bottom: 20px;
+                font-weight: 500;
+            }
+
+            .dinero-efecto {
+                font-size: 28px;
+                font-weight: bold;
+                padding: 15px;
+                border-radius: 15px;
+                margin: 20px 0;
+                animation: pulsar 1.5s ease-in-out infinite;
+            }
+
+            .dinero-efecto.positivo {
+                background: linear-gradient(135deg, #2ecc71, #27ae60);
+                color: white;
+                box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+            }
+
+            .dinero-efecto.negativo {
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                color: white;
+                box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            }
+
+            .carta-decoracion {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                pointer-events: none;
+            }
+
+            .carta-esquina {
+                position: absolute;
+                width: 20px;
+                height: 20px;
+                border: 3px solid rgba(52, 152, 219, 0.2);
+            }
+
+            .carta-esquina-1 { top: 15px; left: 15px; border-right: none; border-bottom: none; }
+            .carta-esquina-2 { top: 15px; right: 15px; border-left: none; border-bottom: none; }
+            .carta-esquina-3 { bottom: 15px; left: 15px; border-right: none; border-top: none; }
+            .carta-esquina-4 { bottom: 15px; right: 15px; border-left: none; border-top: none; }
+
+            .carta-footer {
+                padding: 25px;
+                text-align: center;
+            }
+
+            .carta-btn-ok {
+                background: #3498db;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                font-size: 16px;
+                font-weight: bold;
+                border-radius: 25px;
+                cursor: pointer;
+                transition: all 0.3s;
+                box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            }
+
+            .carta-btn-ok:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+            }
+
+            .carta-btn-ok:active {
+                transform: translateY(0);
+            }
+
+            @keyframes aparecer {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            @keyframes deslizar {
+                from {
+                    transform: translateY(-50px) scale(0.9);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0) scale(1);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes rebote {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+
+            @keyframes pulsar {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+
+            @keyframes rotar {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+
+        // Agregar modal y estilos al documento
+        document.head.appendChild(estilos);
+        document.body.appendChild(modal);
+
+        // Auto-cerrar después de 8 segundos
+        setTimeout(() => {
+            if (document.getElementById('cartaModal')) {
+                modal.remove();
+            }
+        }, 8000);
+
+        // Enfocar el botón para accesibilidad
+        setTimeout(() => {
+            const btnOk = modal.querySelector('.carta-btn-ok');
+            if (btnOk) btnOk.focus();
+        }, 100);
+    }
+
+    /**
+     * Procesa las acciones de las cartas (dinero, movimiento, etc.)
+     */
+    async procesarAccionCarta(player, carta, tipoCarta) {
+        console.log(`🎯 Procesando acción de carta ${tipoCarta}:`, carta.action);
+        
+        if (!carta.action) return;
+
+        // Procesar dinero (positivo o negativo)
+        if (carta.action.money !== undefined) {
+            const cantidad = carta.action.money;
+            player.dinero += cantidad;
+            
+            console.log(`💰 ${player.nickname} ${cantidad >= 0 ? 'recibe' : 'paga'} $${Math.abs(cantidad)}`);
+            console.log(`💳 Dinero actual: $${player.dinero}`);
+        }
+
+        // Procesar movimiento (si implementamos cartas de movimiento en el futuro)
+        if (carta.action.goTo !== undefined) {
+            const destino = carta.action.goTo;
+            if (destino === 'jail') {
+                console.log('🏛️ Enviando a la cárcel por carta');
+                await this.enviarACarcel(player);
+                return; // Salir porque enviarACarcel ya actualiza todo
+            }
+            // Aquí se pueden agregar más destinos en el futuro
+        }
+
+        // Procesar otras acciones futuras aquí
+        // if (carta.action.advanceTo) { ... }
+        // if (carta.action.payEachPlayer) { ... }
     }
 
     /**
@@ -879,69 +1691,66 @@ class Game {
     /**
      * Envía un jugador a la cárcel
      */
-    async enviarACarcel(player) {
-        player.position = 10; // Posición de la cárcel
-        player.estaEnCarcel = true;
-        player.turnosEnCarcel = 0;
+    async enviarACarcel(player) { // compat backward para llamadas existentes
+        return this.sendToJail(player);
+    }
 
-        // Mover ficha visualmente a la cárcel
+    async sendToJail(player) {
+        if (typeof player.goToJail === 'function') player.goToJail(); else { player.estaEnCarcel = true; player.turnosCarcel = 0; }
+
+        // localizar índice cárcel dinámicamente (id 10 o nombre con cárcel)
+        const jailIndex = 10;
+    const oldPos = player.position ?? 0;
+    player.position = jailIndex;
+
         const tokenElement = document.querySelector(`[data-player-id="${player.id}"]`);
         const jailSquare = document.querySelector('[data-square-id="10"]');
-        
         if (tokenElement && jailSquare) {
             const tokensContainer = jailSquare.querySelector('.player-tokens') || jailSquare;
             tokensContainer.appendChild(tokenElement);
             tokenElement.setAttribute('data-position', '10');
         }
-
-        this.mostrarMensaje(player, '🚔 ¡A la Cárcel!', 
-            'Has sido enviado a la cárcel. Pierdes turnos o puedes pagar para salir.');
-    this.actualizarEstadoBotones();
-    this.updatePlayerStatsPanel();
-    }
-
-    /**
-     * Maneja las acciones en la cárcel
-     */
-    async manejarCarcel(player) {
-        if (!player.estaEnCarcel) return;
-
-        // Si es el turno inmediato a su ingreso (turnosEnCarcel === 0), no ofrecer aún pagar
-        if (player.turnosEnCarcel === 0) {
-            this.mostrarMensaje(player, '🔐 Cárcel', 'Esperarás hasta tu próximo turno para intentar salir.');
-            return;
-        }
-
-        player.turnosEnCarcel++;
-
-        if (player.turnosEnCarcel > 3) {
-            // Sale automáticamente
-            player.estaEnCarcel = false;
-            player.turnosEnCarcel = 0;
-            this.mostrarMensaje(player, '🔓 Libertad', 'Has cumplido tu condena. ¡Eres libre!');
-            this.actualizarEstadoBotones();
-            this.updatePlayerStatsPanel();
-            return;
-        }
-
-        const pagar = await this.mostrarConfirmacion(
-            '🔐 Cárcel',
-            `¿Pagar $50 para salir? (Turno ${player.turnosEnCarcel}/3)`,
-            player
-        );
-
-        if (pagar && player.dinero >= 50) {
-            player.dinero -= 50;
-            player.estaEnCarcel = false;
-            player.turnosEnCarcel = 0;
-            this.mostrarMensaje(player, '💰 Libertad Pagada', `Saliste pagando $50. Dinero: $${player.dinero}`);
-        } else if (pagar && player.dinero < 50) {
-            this.notifyWarn('Dinero insuficiente', 'No tienes $50 para pagar la salida.');
-        } else {
-            this.mostrarMensaje(player, '🔒 Sigues en la Cárcel', `Turno ${player.turnosEnCarcel}/3`);
-        }
+        this.mostrarMensaje(player, '🚔 ¡A la Cárcel!', 'Has sido enviado a la cárcel.');
         this.actualizarEstadoBotones();
         this.updatePlayerStatsPanel();
+    }
+
+    /** Manejo de intento de salida al inicio del turno */
+    handleJailTurnStart(player, diceInfo = null) {
+        if (!player.estaEnCarcel) return { freed:false };
+        if (typeof player.tryLeaveJail === 'function') {
+            const res = player.tryLeaveJail({ dice: diceInfo, cost:50, maxTurns:3 });
+            if (res.freed) {
+                this.mostrarMensaje(player, 'Cárcel', {
+                    pay: 'Pagas $50 y sales.',
+                    double: 'Sacaste dobles y sales.',
+                    autoPay: 'Cumpliste 3 turnos: pagas $50 y sales.',
+                    null: 'Sales de la cárcel.'
+                }[res.reason ?? 'null']);
+                this.actualizarEstadoBotones();
+                this.updatePlayerStatsPanel();
+                return { freed:true, reason:res.reason };
+            }
+            // No salió
+            this.mostrarMensaje(player, 'Cárcel', 'Permanece en la cárcel.');
+            this.actualizarEstadoBotones();
+            this.updatePlayerStatsPanel();
+            return { freed:false };
+        }
+        // fallback simple
+        player.turnosCarcel = (player.turnosCarcel||0)+1;
+        if (diceInfo?.isDouble) {
+            player.estaEnCarcel = false; player.turnosCarcel = 0;
+            this.mostrarMensaje(player, 'Cárcel', 'Dobles: sales de la cárcel.');
+            return { freed:true, reason:'double' };
+        }
+        if (player.turnosCarcel >=3 && player.dinero >=50){
+            player.dinero -=50; player.estaEnCarcel=false; player.turnosCarcel=0;
+            this.mostrarMensaje(player, 'Cárcel', 'Pagas $50 y sales.');
+            return { freed:true, reason:'autoPay' };
+        }
+        this.mostrarMensaje(player,'Cárcel',`Sigues en la cárcel (turno ${player.turnosCarcel}/3)`);
+        return { freed:false };
     }
 
     /**
@@ -1418,17 +2227,12 @@ class Game {
     }
 
     /**
-     * Actualiza el estado (habilitado/deshabilitado) de los botones según el contexto
+     * Actualiza el estado de TODOS los botones con REGLAS ESTRICTAS
      */
     actualizarEstadoBotones() {
-        console.log('🔄 actualizarEstadoBotones() llamado - Estado:', {
-            gameStarted: this.gameStarted,
-            jugadores: this.players.length,
-            turnoActual: this.currentPlayerIndex
-        });
+        console.log('🔄 Actualizando botones con reglas estrictas');
         
         if (!this.players.length || !this.gameStarted) {
-            console.log('❌ No hay jugadores o juego no iniciado, deshabilitando todos los botones');
             this.deshabilitarTodosBotones();
             return;
         }
@@ -1437,160 +2241,249 @@ class Game {
         if (!currentPlayer) return;
 
         const position = currentPlayer.position || 0;
-        const square = this.board.squares[position];
+        const square = this.board.squaresByPosition[position];
         if (!square) return;
 
-        // Resetear todos los botones primero
+        // Resetear todos los botones
         this.deshabilitarTodosBotones();
 
-        // Habilitar botón de dados si no está en cárcel o ya lanzó
+        // REGLA: Dados siempre disponibles (incluso en cárcel para intentar salir)
         const btnLanzarDados = document.getElementById('btnLanzarDados');
         if (btnLanzarDados) {
-            btnLanzarDados.disabled = currentPlayer.estaEnCarcel && currentPlayer.turnosEnCarcel <= 0;
+            btnLanzarDados.disabled = false;
         }
 
-        // Comprobar si el jugador es dueño de la propiedad actual
-        const propiedad = currentPlayer.propiedades?.find(p => p.id === square.id);
-        const esPropiedad = ['property', 'railroad', 'utility'].includes(square.type);
-        const propiedadDisponible = esPropiedad && !this.players.some(p => p.propiedades?.some(prop => prop.id === square.id));
-        const hayPropietario = esPropiedad && this.players.find(p => p.propiedades?.some(prop => prop.id === square.id));
-
-        // Limpiar razones previas
-        const limpiarRazones = () => {
-            document.querySelectorAll('#acciones-casilla button').forEach(b=>{ delete b.dataset.disableReason; });
-        };
-        limpiarRazones();
-
-        // Botón Comprar Propiedad
-        const btnComprarPropiedad = document.getElementById('btnComprarPropiedad');
-        if (btnComprarPropiedad) {
-            const precio = square.price || 100;
-            let condicion = !propiedadDisponible || currentPlayer.dinero < precio;
-            if (currentPlayer.estaEnCarcel) condicion = true;
-            btnComprarPropiedad.disabled = condicion;
-            if (condicion) {
-                if (!propiedadDisponible) btnComprarPropiedad.dataset.disableReason = 'Ya tiene dueño o no es comprable.';
-                else if (currentPlayer.dinero < precio) btnComprarPropiedad.dataset.disableReason = `Necesitas $${precio}. Tienes $${currentPlayer.dinero}.`;
-                else if (currentPlayer.estaEnCarcel) btnComprarPropiedad.dataset.disableReason = 'En cárcel: no puedes comprar.';
+        // REGLA CÁRCEL: Si está en cárcel, SOLO puede usar dados o pagar salida
+        if (currentPlayer.estaEnCarcel) {
+            const btnIrCarcel = document.getElementById('btnIrCarcel');
+            if (btnIrCarcel) {
+                btnIrCarcel.disabled = currentPlayer.dinero < 50;
+                btnIrCarcel.textContent = '🔓 Pagar Salida ($50)';
+                if (btnIrCarcel.disabled) {
+                    btnIrCarcel.dataset.disableReason = 'Necesitas $50 para salir de la cárcel.';
+                } else {
+                    delete btnIrCarcel.dataset.disableReason;
+                }
             }
+            
+            // Deshabilitar TODOS los demás botones en cárcel
+            this.aplicarRazonGeneral('En cárcel: solo puedes lanzar dados o pagar salida.');
+            return;
         }
 
-        // Botón Pagar Renta - Solo si hay propietario que no sea el jugador actual y la propiedad NO está hipotecada
-        const btnPagarRenta = document.getElementById('btnPagarRenta');
-        if (btnPagarRenta) {
-            const propietario = hayPropietario;
-            const propiedadHipotecada = propietario && propietario.propiedades?.find(p => p.id === square.id)?.hipotecada;
-            const condicion = !hayPropietario || hayPropietario.id === currentPlayer.id || propiedadHipotecada;
-            btnPagarRenta.disabled = condicion;
-            if (condicion) {
-                if (!hayPropietario) btnPagarRenta.dataset.disableReason = 'Sin propietario: nadie cobra renta.';
-                else if (hayPropietario.id === currentPlayer.id) btnPagarRenta.dataset.disableReason = 'Eres el propietario.';
-                else if (propiedadHipotecada) btnPagarRenta.dataset.disableReason = 'Propiedad hipotecada: no genera renta.';
-            }
-        }
-
-        // Botones de construcción - No se puede construir en propiedades hipotecadas
-        const btnConstruirCasa = document.getElementById('btnConstruirCasa');
-        const btnConstruirHotel = document.getElementById('btnConstruirHotel');
-        if (btnConstruirCasa && btnConstruirHotel) {
-            const monopolioOk = square.color ? (
-                (this.board.propertiesByColor?.get(square.color)?.length || 0) === (currentPlayer.propiedades?.filter(p=>p.color===square.color).length || 0)
-            ) : true;
-            const puedeContruirCasa = propiedad && propiedad.casas < 4 && !propiedad.hotel && !propiedad.hipotecada && !currentPlayer.estaEnCarcel && monopolioOk;
-            const puedeContruirHotel = propiedad && propiedad.casas === 4 && !propiedad.hotel && !propiedad.hipotecada && !currentPlayer.estaEnCarcel && monopolioOk;
-            btnConstruirCasa.disabled = !puedeContruirCasa;
-            btnConstruirHotel.disabled = !puedeContruirHotel;
-            if (!puedeContruirCasa) {
-                if (!propiedad) btnConstruirCasa.dataset.disableReason = 'No es tu propiedad.';
-                else if (propiedad.hotel) btnConstruirCasa.dataset.disableReason = 'Ya hay un hotel.';
-                else if (propiedad?.hipotecada) btnConstruirCasa.dataset.disableReason = 'Propiedad hipotecada.';
-                else if (propiedad.casas >= 4) btnConstruirCasa.dataset.disableReason = 'Máximo de casas (4).';
-                else if (currentPlayer.estaEnCarcel) btnConstruirCasa.dataset.disableReason = 'En cárcel: no puedes construir.';
-                else if (!monopolioOk) btnConstruirCasa.dataset.disableReason = 'Necesitas monopolio del color.';
-            }
-            if (!puedeContruirHotel) {
-                if (!propiedad) btnConstruirHotel.dataset.disableReason = 'No es tu propiedad.';
-                else if (propiedad.hotel) btnConstruirHotel.dataset.disableReason = 'Hotel ya construido.';
-                else if (propiedad?.hipotecada) btnConstruirHotel.dataset.disableReason = 'Propiedad hipotecada.';
-                else if (propiedad.casas < 4) btnConstruirHotel.dataset.disableReason = 'Necesitas 4 casas.';
-                else if (currentPlayer.estaEnCarcel) btnConstruirHotel.dataset.disableReason = 'En cárcel: no puedes construir.';
-                else if (!monopolioOk) btnConstruirHotel.dataset.disableReason = 'Necesitas monopolio del color.';
-            }
-        }
-
-        // Botones de hipoteca
-        const btnHipotecar = document.getElementById('btnHipotecar');
-        const btnDeshipotecar = document.getElementById('btnDeshipotecar');
-        if (btnHipotecar && btnDeshipotecar) {
-            const valorHipoteca = square.mortgage || Math.floor(square.price / 2);
-            const costoDeshipoteca = Math.floor(valorHipoteca * 1.1);
-            btnHipotecar.disabled = !propiedad || propiedad.hipotecada || (propiedad.casas > 0 || propiedad.hotel) || currentPlayer.estaEnCarcel;
-            if (btnHipotecar.disabled) {
-                if (!propiedad) btnHipotecar.dataset.disableReason = 'No es tu propiedad.';
-                else if (propiedad.hipotecada) btnHipotecar.dataset.disableReason = 'Ya hipotecada.';
-                else if (propiedad.casas > 0 || propiedad.hotel) btnHipotecar.dataset.disableReason = 'Vende construcciones primero.';
-                else if (currentPlayer.estaEnCarcel) btnHipotecar.dataset.disableReason = 'En cárcel: no puedes hipotecar.';
-            }
-            btnDeshipotecar.disabled = !propiedad || !propiedad.hipotecada || currentPlayer.dinero < costoDeshipoteca || currentPlayer.estaEnCarcel;
-            if (btnDeshipotecar.disabled) {
-                if (!propiedad) btnDeshipotecar.dataset.disableReason = 'No es tu propiedad.';
-                else if (!propiedad.hipotecada) btnDeshipotecar.dataset.disableReason = 'No está hipotecada.';
-                else if (currentPlayer.dinero < costoDeshipoteca) btnDeshipotecar.dataset.disableReason = `Necesitas $${costoDeshipoteca}.`;
-                else if (currentPlayer.estaEnCarcel) btnDeshipotecar.dataset.disableReason = 'En cárcel: no puedes deshipotecar.';
-            }
-        }
-
-        // Botones de cartas
-        const btnCartaSorpresa = document.getElementById('btnCartaSorpresa');
-        const btnCajaComunidad = document.getElementById('btnCajaComunidad');
-        if (btnCartaSorpresa) {
-            if (square.type === 'chance') {
-                // Habilitado sólo si no se ha tomado ya carta en este aterrizaje
-                btnCartaSorpresa.disabled = !!currentPlayer.chanceDrawn;
-                btnCartaSorpresa.dataset.disableReason = btnCartaSorpresa.disabled ? 'Ya tomaste carta de Suerte.' : '';
-            } else {
-                btnCartaSorpresa.disabled = true;
-                btnCartaSorpresa.dataset.disableReason = 'No estás en Suerte.';
-            }
-        }
-        if (btnCajaComunidad) {
-            if (square.type === 'community_chest') {
-                btnCajaComunidad.disabled = !!currentPlayer.communityDrawn;
-                btnCajaComunidad.dataset.disableReason = btnCajaComunidad.disabled ? 'Ya tomaste carta de Comunidad.' : '';
-            } else {
-                btnCajaComunidad.disabled = true;
-                btnCajaComunidad.dataset.disableReason = 'No estás en Comunidad.';
-            }
-        }
-
-        // Botón de impuestos
-        const btnPagarImpuesto = document.getElementById('btnPagarImpuesto');
-        if (btnPagarImpuesto) {
-            btnPagarImpuesto.disabled = square.type !== 'tax';
-            if (btnPagarImpuesto.disabled) btnPagarImpuesto.dataset.disableReason = 'Casilla sin impuestos.';
-        }
-
-        // Botón de cárcel
+        // REGLAS NORMALES (fuera de cárcel)
+        this.configurarBotonComprar(currentPlayer, square);
+        this.configurarBotonesConstruccion(currentPlayer, square);
+        this.configurarBotonesHipoteca(currentPlayer, square);
+        this.configurarBotonesEspeciales(currentPlayer, square);
+        
+        // Botón cárcel deshabilitado si no está en cárcel
         const btnIrCarcel = document.getElementById('btnIrCarcel');
         if (btnIrCarcel) {
-            if (!currentPlayer.estaEnCarcel) {
-                btnIrCarcel.textContent = 'Pagar Salida de la Cárcel';
-                btnIrCarcel.disabled = true;
-                btnIrCarcel.dataset.disableReason = 'Sólo disponible cuando estás en la cárcel.';
-            } else if (currentPlayer.turnosEnCarcel === 0) {
-                btnIrCarcel.textContent = 'Pagar Salida de la Cárcel';
-                btnIrCarcel.disabled = true;
-                btnIrCarcel.dataset.disableReason = 'Debes esperar al siguiente turno.';
-            } else {
-                btnIrCarcel.textContent = '🔓 Pagar Salida ($50)';
-                btnIrCarcel.disabled = currentPlayer.dinero < 50;
-                if (btnIrCarcel.disabled) btnIrCarcel.dataset.disableReason = 'Necesitas $50 para salir.';
+            btnIrCarcel.disabled = true;
+            btnIrCarcel.textContent = 'Pagar Salida de la Cárcel';
+            btnIrCarcel.dataset.disableReason = 'Solo disponible cuando estás en la cárcel.';
+        }
+
+        this.updatePlayerStatsPanel();
+        this.agregarTooltipsAcciones();
+    }
+
+    /**
+     * REGLA: Configurar botón de compra con validaciones estrictas
+     */
+    configurarBotonComprar(player, square) {
+        const btnComprar = document.getElementById('btnComprarPropiedad');
+        if (!btnComprar) return;
+
+        const esPropiedad = ['property', 'railroad', 'utility'].includes(square.type);
+        const propietario = this.players.find(p => p.propiedades?.some(prop => prop.id === square.id));
+        const precio = square.price || 100;
+
+        // REGLA: Solo se puede comprar si es propiedad libre y tienes dinero
+        const puedeComprar = esPropiedad && !propietario && player.dinero >= precio;
+        
+        btnComprar.disabled = !puedeComprar;
+        
+        if (!puedeComprar) {
+            if (!esPropiedad) {
+                btnComprar.dataset.disableReason = 'Esta casilla no es una propiedad comprable.';
+            } else if (propietario) {
+                btnComprar.dataset.disableReason = `Ya tiene dueño: ${propietario.nickname}.`;
+            } else if (player.dinero < precio) {
+                btnComprar.dataset.disableReason = `Necesitas $${precio}. Tienes $${player.dinero}.`;
+            }
+        } else {
+            delete btnComprar.dataset.disableReason;
+        }
+    }
+
+    /**
+     * REGLA: Configurar botones de construcción con todas las validaciones
+     */
+    configurarBotonesConstruccion(player, square) {
+        const btnCasa = document.getElementById('btnConstruirCasa');
+        const btnHotel = document.getElementById('btnConstruirHotel');
+        
+        if (!btnCasa || !btnHotel) return;
+
+        const propiedad = player.propiedades?.find(p => p.id === square.id);
+        const monopolio = square.color && this.tieneMonopolioColor(propiedad, square.color, player);
+        
+        // REGLA: Solo se puede construir con monopolio, sin hipotecar, con dinero
+        let puedeConstructCasa = propiedad && monopolio && !propiedad.hipotecada && 
+                                propiedad.casas < 4 && !propiedad.hotel && player.dinero >= 100;
+        
+        let puedeConstructHotel = propiedad && monopolio && !propiedad.hipotecada && 
+                                 propiedad.casas === 4 && !propiedad.hotel && player.dinero >= 250;
+
+        // REGLA: Construcción equilibrada
+        if (puedeConstructCasa && square.color) {
+            const { min, max } = this.getEstadoGrupoConstruccion(square.color, player);
+            if (propiedad.casas > min && max - min > 0) {
+                puedeConstructCasa = false;
             }
         }
 
-        // Actualizar panel de estadísticas tras revisar botones
-        this.updatePlayerStatsPanel();
-        this.agregarTooltipsAcciones(); // refrescar tooltips con nuevas razones
+        // REGLA: Hotel requiere 4 casas en TODAS las propiedades del grupo
+        if (puedeConstructHotel && square.color) {
+            const { estado } = this.getEstadoGrupoConstruccion(square.color, player);
+            const faltanCasas = estado.filter(e => e.id !== square.id && !e.hotel && e.casas < 4);
+            if (faltanCasas.length > 0) {
+                puedeConstructHotel = false;
+            }
+        }
+
+        btnCasa.disabled = !puedeConstructCasa;
+        btnHotel.disabled = !puedeConstructHotel;
+
+        // Razones específicas
+        if (!puedeConstructCasa) {
+            if (!propiedad) {
+                btnCasa.dataset.disableReason = 'No es tu propiedad.';
+            } else if (!monopolio) {
+                btnCasa.dataset.disableReason = 'Necesitas monopolio del color.';
+            } else if (propiedad.hipotecada) {
+                btnCasa.dataset.disableReason = 'Propiedad hipotecada.';
+            } else if (propiedad.hotel) {
+                btnCasa.dataset.disableReason = 'Ya hay un hotel.';
+            } else if (propiedad.casas >= 4) {
+                btnCasa.dataset.disableReason = 'Máximo de casas alcanzado.';
+            } else if (player.dinero < 100) {
+                btnCasa.dataset.disableReason = 'Necesitas $100 para construir.';
+            } else {
+                btnCasa.dataset.disableReason = 'Construcción debe ser equilibrada.';
+            }
+        }
+
+        if (!puedeConstructHotel) {
+            if (!propiedad) {
+                btnHotel.dataset.disableReason = 'No es tu propiedad.';
+            } else if (propiedad.casas < 4) {
+                btnHotel.dataset.disableReason = 'Necesitas exactamente 4 casas.';
+            } else if (player.dinero < 250) {
+                btnHotel.dataset.disableReason = 'Necesitas $250 para construir hotel.';
+            } else {
+                btnHotel.dataset.disableReason = 'Todas las propiedades del grupo necesitan 4 casas.';
+            }
+        }
+    }
+
+    /**
+     * REGLA: Configurar botones de hipoteca con validaciones
+     */
+    configurarBotonesHipoteca(player, square) {
+        const btnHipotecar = document.getElementById('btnHipotecar');
+        const btnDeshipotecar = document.getElementById('btnDeshipotecar');
+        
+        if (!btnHipotecar || !btnDeshipotecar) return;
+
+        const propiedad = player.propiedades?.find(p => p.id === square.id);
+        const valorHipoteca = square.mortgage || Math.floor((square.price || 100) / 2);
+        const costoDeshipoteca = Math.ceil(valorHipoteca * 1.1);
+
+        // REGLA: Solo se puede hipotecar propiedad propia sin construcciones
+        const puedeHipotecar = propiedad && !propiedad.hipotecada && 
+                              propiedad.casas === 0 && !propiedad.hotel;
+
+        // REGLA: Solo se puede deshipotecar si está hipotecada y tienes dinero
+        const puedeDeshipotecar = propiedad && propiedad.hipotecada && 
+                                 player.dinero >= costoDeshipoteca;
+
+        btnHipotecar.disabled = !puedeHipotecar;
+        btnDeshipotecar.disabled = !puedeDeshipotecar;
+
+        if (!puedeHipotecar) {
+            if (!propiedad) {
+                btnHipotecar.dataset.disableReason = 'No es tu propiedad.';
+            } else if (propiedad.hipotecada) {
+                btnHipotecar.dataset.disableReason = 'Ya está hipotecada.';
+            } else if (propiedad.casas > 0 || propiedad.hotel) {
+                btnHipotecar.dataset.disableReason = 'Vende construcciones primero.';
+            }
+        }
+
+        if (!puedeDeshipotecar) {
+            if (!propiedad) {
+                btnDeshipotecar.dataset.disableReason = 'No es tu propiedad.';
+            } else if (!propiedad.hipotecada) {
+                btnDeshipotecar.dataset.disableReason = 'No está hipotecada.';
+            } else if (player.dinero < costoDeshipoteca) {
+                btnDeshipotecar.dataset.disableReason = `Necesitas $${costoDeshipoteca} (incluye 10% interés).`;
+            }
+        }
+    }
+
+    /**
+     * REGLA: Configurar botones especiales
+     */
+    configurarBotonesEspeciales(player, square) {
+        // Botones de cartas SIEMPRE deshabilitados (automáticas)
+        const btnSuerte = document.getElementById('btnCartaSorpresa');
+        const btnComunidad = document.getElementById('btnCajaComunidad');
+        
+        if (btnSuerte) {
+            btnSuerte.disabled = true;
+            btnSuerte.dataset.disableReason = 'Las cartas se toman automáticamente.';
+        }
+        if (btnComunidad) {
+            btnComunidad.disabled = true;
+            btnComunidad.dataset.disableReason = 'Las cartas se toman automáticamente.';
+        }
+
+        // Botón de impuestos solo si es casilla de impuesto
+        const btnImpuesto = document.getElementById('btnPagarImpuesto');
+        if (btnImpuesto) {
+            btnImpuesto.disabled = square.type !== 'tax';
+            if (square.type !== 'tax') {
+                btnImpuesto.dataset.disableReason = 'Solo en casillas de impuesto.';
+            }
+        }
+
+        // Botón de pagar renta ELIMINADO (ahora es automático)
+        const btnRenta = document.getElementById('btnPagarRenta');
+        if (btnRenta) {
+            btnRenta.disabled = true;
+            btnRenta.dataset.disableReason = 'La renta se paga automáticamente.';
+        }
+    }
+
+    /**
+     * Aplica una razón general a todos los botones deshabilitados
+     */
+    aplicarRazonGeneral(razon) {
+        const botones = [
+            'btnComprarPropiedad', 'btnConstruirCasa', 'btnConstruirHotel',
+            'btnHipotecar', 'btnDeshipotecar', 'btnCartaSorpresa', 
+            'btnCajaComunidad', 'btnPagarImpuesto', 'btnPagarRenta'
+        ];
+
+        botones.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn && btn.disabled) {
+                btn.dataset.disableReason = razon;
+            }
+        });
     }
 
     /**
@@ -1722,6 +2615,13 @@ class Game {
                 this.notifyWarn('Sin monopolio', 'Necesitas todas las propiedades de este color para construir.');
                 return;
             }
+            // Validar regla de construcción equilibrada
+            const { estado, min, max } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
+            const propEstado = estado.find(e => e.id === square.id);
+            if (propEstado && propEstado.casas > min && max - min > 0 && propEstado.casas >= max) {
+                this.notifyWarn('Construcción desbalanceada', `Debes construir primero en propiedades con menos casas (mínimo actual: ${min}).`);
+                return;
+            }
         }
         this.ofrecerConstruccion(currentPlayer, square);
     }
@@ -1763,6 +2663,13 @@ class Game {
             const totalColorTablero = (this.board.propertiesByColor?.get(square.color) || []).length;
             if (propiedadesColorJugador.length !== totalColorTablero) {
                 this.notifyWarn('Sin monopolio', 'Necesitas todas las propiedades de este color.');
+                return;
+            }
+            // Validar que las demás propiedades del grupo estén también con 4 casas (regla antes de hotel)
+            const { estado } = this.getEstadoGrupoConstruccion(square.color, currentPlayer);
+            const faltantes = estado.filter(e => e.id !== square.id && !e.hotel && e.casas < 4);
+            if (faltantes.length) {
+                this.notifyWarn('Construcción inválida', 'Necesitas 4 casas en cada propiedad del color antes de un hotel.');
                 return;
             }
         }
@@ -1884,18 +2791,21 @@ class Game {
             return;
         }
 
-        // Si está en cárcel y es el turno de ingreso (turnosEnCarcel === 0) impedir pago inmediato
-        if (currentPlayer.estaEnCarcel && currentPlayer.turnosEnCarcel === 0) {
-            this.notifyInfo('Espera un turno', 'Aún no puedes intentar salir este mismo turno.');
-            return;
-        }
+        // Con nueva lógica se permite intentar (pagar) siempre, tryLeaveJail decide
 
         if (!currentPlayer.estaEnCarcel) {
             this.notifyWarn('No estás en la cárcel', 'Esta acción sólo aplica cuando estás encerrado.');
             return;
         }
 
-        this.manejarCarcel(currentPlayer);
+        const res = currentPlayer.tryLeaveJail ? currentPlayer.tryLeaveJail({ pay:true, cost:50, maxTurns:3 }) : { freed:false };
+        if (res.freed) {
+            this.notifyOk('Sales de la cárcel', res.reason === 'pay' ? 'Pagaste $50.' : 'Saliste.');
+        } else {
+            this.notifyWarn('Sigue en cárcel', 'No has podido salir aún.');
+        }
+        this.actualizarEstadoBotones();
+        this.updatePlayerStatsPanel();
     }
 
     /**
@@ -2396,29 +3306,61 @@ class Game {
     }
 
     /**
-     * Procesa el lanzamiento de dados y maneja el sistema de turnos
+     * Procesa el lanzamiento de dados con REGLAS ESTRICTAS DE CÁRCEL
      */
     procesarLanzamiento(dado1, dado2, total) {
         const currentPlayer = this.players[this.currentPlayerIndex];
         
         console.log(`🎲 ${currentPlayer.nickname} lanzó: ${dado1} + ${dado2} = ${total}`);
-        
-        // Mostrar resultado con animación
         this.mostrarResultadoMejorado(dado1, dado2, total);
+
+        // REGLA CÁRCEL: Manejo completo antes de cualquier movimiento
+        if (currentPlayer.estaEnCarcel) {
+            const esDoble = dado1 === dado2;
+            const resultado = currentPlayer.tryLeaveJail({ 
+                dice: { isDouble: esDoble }, 
+                cost: 50, 
+                maxTurns: 3 
+            });
+            
+            if (resultado.freed) {
+                const mensajes = {
+                    'double': '¡Sacaste dobles y sales gratis!',
+                    'autoPay': '3 intentos cumplidos. Pagas $50 obligatorio y sales.',
+                    'pay': 'Pagaste $50 voluntariamente y sales.'
+                };
+                
+                this.notifyOk('🔓 Libre de la Cárcel', mensajes[resultado.reason]);
+                
+                // Solo se mueve si salió por dobles o pago (no por intento fallido)
+                if (resultado.reason === 'double' || resultado.reason === 'autoPay' || resultado.reason === 'pay') {
+                    this.movePlayerToken(currentPlayer, total);
+                } else {
+                    // Pasa turno sin moverse
+                    setTimeout(() => this.siguienteTurno(), 1000);
+                    return;
+                }
+            } else {
+                this.notifyWarn('🔒 Sigues en la Cárcel', 
+                    `Intento ${currentPlayer.turnosCarcel}/3. ${esDoble ? 'No sacaste dobles.' : 'Necesitas dobles o pagar $50.'}`);
+                // No se mueve, pasa turno automáticamente
+                setTimeout(() => this.siguienteTurno(), 1500);
+                return;
+            }
+        } else {
+            // Movimiento normal
+            this.movePlayerToken(currentPlayer, total);
+        }
         
-        // Mover el jugador
-        this.movePlayerToken(currentPlayer, total);
-        
-        // Verificar dobles para turnos adicionales
+        // Verificar dobles para turno adicional
         const esDoble = dado1 === dado2;
-        
         setTimeout(() => {
-            if (esDoble) {
+            if (esDoble && !currentPlayer.estaEnCarcel) {
                 this.manejarDobles(currentPlayer, total);
             } else {
                 this.siguienteTurno();
             }
-        }, 2000); // Esperar 2 segundos antes del siguiente turno
+        }, 2000);
     }
 
     /**
@@ -2761,6 +3703,11 @@ class Game {
             const hipotecadas = props.filter(p => p.hipotecada).length;
             if (get('ps-hipotecadas')) get('ps-hipotecadas').textContent = hipotecadas;
             if (get('ps-carcel')) get('ps-carcel').textContent = current.estaEnCarcel ? 'Sí' : 'No';
+            // Añadir badge de turnos en cárcel si aplica
+            if (current.estaEnCarcel) {
+                if (!get('ps-carcel').dataset.originalLabel) get('ps-carcel').dataset.originalLabel = get('ps-carcel').textContent;
+                get('ps-carcel').textContent = `Sí (${current.turnosCarcel || 0}/3)`;
+            }
         }
         const resumen = document.getElementById('ps-resumen');
         if (resumen) {
@@ -2794,525 +3741,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 export default Game;
-
-/*
-
-// Inicialización cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', async function() {
-    await initializeGame();
-    setupEventListeners();
-});
-
-/**
- * Inicializa el juego
- 
-async function initializeGame() {
-    try {
-        // Verificar que las clases necesarias estén disponibles
-        if (typeof MonopolyBoard === 'undefined') {
-            throw new Error('MonopolyBoard no está definido. Problema al cargar Board.js');
-        }
-        if (typeof BoardUtils === 'undefined') {
-            throw new Error('BoardUtils no está definido. Problema al cargar BoardUtils.js');
-        }
-        if (typeof BoardRenderer === 'undefined') {
-            throw new Error('BoardRenderer no está definido. Problema al cargar BoardRenderer.js');
-        }
-        
-        log('Todas las clases cargadas correctamente');
-        
-        // Crear instancia del tablero con datos de prueba
-        board = new MonopolyBoard.Board();
-        
-        // Generar datos de prueba inicialmente con 40 casillas
-        await generateTestBoard(40);
-        
-        // Cargar jugadores del localStorage si existen
-        const jugadoresData = localStorage.getItem('jugadores');
-        const numJugadores = localStorage.getItem('numJugadores');
-        
-        if (jugadoresData && numJugadores) {
-            const jugadores = JSON.parse(jugadoresData);
-            log(`Cargando ${numJugadores} jugadores del menú inicial`);
-            
-            // Agregar cada jugador al tablero
-            for (let i = 0; i < jugadores.length; i++) {
-                const jugador = jugadores[i];
-                addPlayerWithData(jugador.nickname, jugador.color, jugador.ficha, jugador.pais);
-                log(`Jugador agregado: ${jugador.nickname} (${jugador.pais})`);
-            }
-            
-            // Limpiar localStorage después de cargar
-            localStorage.removeItem('jugadores');
-            localStorage.removeItem('numJugadores');
-        } else {
-            log('No se encontraron datos de jugadores. Use el botón "Agregar Jugador" para comenzar.');
-        }
-        
-        log('Juego inicializado correctamente');
-    } catch (error) {
-        console.error('Error al inicializar:', error);
-        log('Error al inicializar el juego: ' + error.message);
-    }
-}
-
-/**
- * Genera un tablero de prueba
- 
-async function generateTestBoard(totalSquares) {
-    try {
-        // Generar datos de prueba
-        const testData = BoardUtils.generateTestBoardData(totalSquares, currentLanguage);
-        
-        // Validar datos
-        const validation = BoardUtils.validateBoardData(testData);
-        if (!validation.valid) {
-            throw new Error(validation.error);
-        }
-
-        // Cargar datos en el tablero
-        await board.initializeBoard(testData);
-
-        // Limpiar renderer anterior si existe
-        if (renderer) {
-            renderer.destroy();
-        }
-
-        renderer = new BoardRenderer('boardContainer', {
-            totalSquares: totalSquares,
-            language: currentLanguage,
-            boardSize: Math.min(800, window.innerWidth - 40),
-            cornerSize: 100,
-            sideSquareWidth: 70,
-            sideSquareHeight: 100
-        });
-
-        // Renderizar el tablero con los datos del board
-        const boardData = board.getBoardDisplayData();
-        await renderer.renderBoard(boardData, totalSquares);
-
-        // Actualizar info
-        updateBoardInfo(totalSquares);
-        
-        log(`Tablero generado: ${totalSquares} casillas`);
-
-    } catch (error) {
-        console.error('Error generando tablero:', error);
-        log('Error: ' + error.message);
-    }
-}
-
-/**
- * Configura los event listeners
- 
-function setupEventListeners() {
-    // Botones de generación
-    document.getElementById('btnGenerate40').addEventListener('click', () => generateTestBoard(40));
-    document.getElementById('btnGenerate28').addEventListener('click', () => generateTestBoard(28));
-    document.getElementById('btnGenerate16').addEventListener('click', () => generateTestBoard(16));
-    
-    // Cambio de idioma
-    document.getElementById('btnChangeLanguage').addEventListener('click', toggleLanguage);
-    
-    // Jugadores
-    document.getElementById('btnAddPlayer').addEventListener('click', addPlayer);
-    document.getElementById('btnReset').addEventListener('click', resetGame);
-    
-    // Dados
-    document.getElementById('btnLanzarDados').addEventListener('click', lanzarDados);
-    
-    // Acciones de propiedades
-    document.getElementById('btnComprarPropiedad').addEventListener('click', buyProperty);
-    document.getElementById('btnPagarRenta').addEventListener('click', pagarRenta);
-    document.getElementById('btnConstruirCasa').addEventListener('click', buildHouse);
-    document.getElementById('btnConstruirHotel').addEventListener('click', construirHotel);
-    document.getElementById('btnHipotecar').addEventListener('click', mortgageProperty);
-    document.getElementById('btnDeshipotecar').addEventListener('click', deshipotecar);
-    
-    // Cartas
-    document.getElementById('btnCartaSorpresa').addEventListener('click', cartaSorpresa);
-    document.getElementById('btnCajaComunidad').addEventListener('click', cajaComunidad);
-    
-    // Otras acciones
-    document.getElementById('btnPagarImpuesto').addEventListener('click', pagarImpuesto);
-    document.getElementById('btnIrCarcel').addEventListener('click', irCarcel);
-    
-    // Controles del juego
-    document.getElementById('btnRankingSidebar').addEventListener('click', verRanking);
-    document.getElementById('btnFinalizarJuego').addEventListener('click', finalizarJuego);
-
-    // Eventos del tablero
-    document.getElementById('boardContainer').addEventListener('squareClick', handleSquareClick);
-}
-
-/**
- * Cambia el idioma del juego
- 
-function changeLanguage() {
-    currentLanguage = currentLanguage === 'es' ? 'en' : 'es';
-    const langButton = document.getElementById('btnChangeLanguage');
-    langButton.textContent = currentLanguage === 'es' ? 'Cambiar Idioma (EN)' : 'Change Language (ES)';
-    
-    document.getElementById('currentLanguage').textContent = currentLanguage === 'es' ? 'Español' : 'English';
-    
-    // Regenerar tablero con nuevo idioma
-    const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
-    generateTestBoard(currentTotal);
-    
-    log(`Idioma cambiado a: ${currentLanguage === 'es' ? 'Español' : 'English'}`);
-}
-
-/**
- * Agrega un jugador genérico
- 
-function addPlayer() {
-    playerCounter++;
-    const playerId = `player${playerCounter}`;
-    const color = playerColors[(playerCounter - 1) % playerColors.length];
-    
-    const playerData = {
-        id: playerId,
-        name: `Jugador ${playerCounter}`,
-        color: color,
-        money: 1500,
-        position: 0
-    };
-
-    if (renderer) {
-        renderer.addPlayer(playerId, playerData);
-        renderer.movePlayer(playerId, 0); // Empezar en GO
-    }
-
-    currentPlayer = playerId;
-    updatePlayerCount();
-    updatePlayerInfo(playerData);
-    log(`${playerData.name} agregado al juego`);
-}
-
-/**
- * Agrega un jugador con datos específicos
- 
-function addPlayerWithData(nickname, color, ficha, pais) {
-    playerCounter++;
-    const playerId = `player${playerCounter}`;
-    
-    const playerData = {
-        id: playerId,
-        name: nickname,
-        color: color,
-        ficha: ficha,
-        pais: pais,
-        money: 1500,
-        position: 0
-    };
-
-    if (renderer) {
-        renderer.addPlayer(playerId, playerData);
-        renderer.movePlayer(playerId, 0); // Empezar en GO
-    }
-
-    if (playerCounter === 1) {
-        currentPlayer = playerId;
-        updatePlayerInfo(playerData);
-    }
-    
-    updatePlayerCount();
-    return playerId;
-}
-
-/**
- * Resetea el juego
- 
-function resetGame() {
-    if (renderer) {
-        renderer.players.clear();
-    }
-    
-    playerCounter = 0;
-    currentPlayer = null;
-    updatePlayerCount();
-    updatePlayerInfo(null);
-    
-    // Regenerar tablero
-    const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
-    generateTestBoard(currentTotal);
-    
-    log('Juego reseteado');
-}
-
-/**
- * Maneja clics en casillas del tablero
- 
-function handleSquareClick(event) {
-    const { square, position } = event.detail;
-    log(`Clic en: ${square.name} (Posición ${position})`);
-    
-    // Si hay jugador activo, mostrar información
-    if (currentPlayer) {
-        const player = renderer.players.get(currentPlayer);
-        log(`${player.name} está en posición ${player.position}, clic en ${position}`);
-    }
-}
-
-/**
- * Actualiza la información del tablero
- 
-function updateBoardInfo(totalSquares) {
-    document.getElementById('totalSquares').textContent = totalSquares;
-}
-
-/**
- * Actualiza el contador de jugadores
- 
-function updatePlayerCount() {
-    document.getElementById('playerCount').textContent = playerCounter;
-}
-
-/**
- * Actualiza la información del jugador actual
- 
-function updatePlayerInfo(playerData) {
-    const playerInfoContainer = document.getElementById('playerInfo');
-    if (!playerInfoContainer) return;
-    
-    if (playerData) {
-        playerInfoContainer.innerHTML = `
-            <h4>🎮 ${playerData.name}</h4>
-            <div class="player-stats">
-                <div class="stat-item">
-                    <span class="stat-label">💰 Dinero:</span>
-                    <span class="stat-value">$${playerData.money}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">📍 Posición:</span>
-                    <span class="stat-value">${playerData.position}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">🎨 Color:</span>
-                    <span class="stat-value">${playerData.color}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">🎲 Ficha:</span>
-                    <span class="stat-value">${playerData.ficha || 'Estándar'}</span>
-                </div>
-            </div>
-        `;
-    } else {
-        playerInfoContainer.innerHTML = `
-            <h4>👤 Sin jugador activo</h4>
-            <p>Agrega jugadores para comenzar</p>
-        `;
-    }
-}
-
-/**
- * Agrega un mensaje al log del juego
- 
-function log(message) {
-    const gameLog = document.getElementById('gameLog');
-    const timestamp = new Date().toLocaleTimeString();
-    gameLog.innerHTML += `<p><span class="timestamp">[${timestamp}]</span> ${message}</p>`;
-    gameLog.scrollTop = gameLog.scrollHeight;
-}
-
-// ===============================
-// FUNCIONES DE ACCIONES DEL JUEGO
-// ===============================
-
-function lanzarDados() {
-    const dado1 = Math.floor(Math.random() * 6) + 1;
-    const dado2 = Math.floor(Math.random() * 6) + 1;
-    const total = dado1 + dado2;
-    
-    document.getElementById('dados-resultado').textContent = `🎲${dado1} 🎲${dado2}`;
-    log(`Dados lanzados: ${dado1} + ${dado2} = ${total}`);
-    
-    if (currentPlayer && renderer) {
-        const player = renderer.players.get(currentPlayer);
-        const newPosition = (player.position + total) % parseInt(document.getElementById('totalSquares').textContent);
-        renderer.movePlayer(currentPlayer, newPosition);
-        
-        // Actualizar información del jugador
-        player.position = newPosition;
-        updatePlayerInfo(player);
-        
-        log(`${player.name} se mueve a la posición ${newPosition}`);
-    }
-}
-
-function comprarPropiedad() {
-    log('Función: Comprar Propiedad');
-}
-
-function pagarRenta() {
-    log('Función: Pagar Renta');
-}
-
-function construirCasa() {
-    log('Función: Construir Casa');
-}
-
-function construirHotel() {
-    log('Función: Construir Hotel');
-}
-
-function hipotecarPropiedad() {
-    log('Función: Hipotecar Propiedad');
-}
-
-function deshipotecarPropiedad() {
-    log('Función: Deshipotecar Propiedad');
-}
-
-function tomarCartaSorpresa() {
-    log('Función: Tomar Carta de Sorpresa');
-}
-
-function tomarCartaComunidad() {
-    log('Función: Tomar Carta de Caja de Comunidad');
-}
-
-function pagarImpuesto() {
-    log('Función: Pagar Impuesto');
-}
-
-function irCarcel() {
-    log('Función: Ir a Cárcel / Pagar Salida');
-}
-
-function finalizarJuego() {
-    if (confirm('¿Estás seguro de que quieres finalizar el juego?')) {
-        log('Juego finalizado por el usuario');
-        window.location.href = '../index.html';
-    }
-}
-
-function verRanking() {
-    log('Función: Ver Ranking Global');
-}
-
-// Nuevas funciones para los botones adicionales
-function lanzarDados() {
-    if (!currentPlayer || !renderer) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-
-    // Simular tirada de dados (1-6 cada dado)
-    const dado1 = Math.floor(Math.random() * 6) + 1;
-    const dado2 = Math.floor(Math.random() * 6) + 1;
-    const total = dado1 + dado2;
-    
-    // Actualizar UI de dados
-    document.getElementById('dados-resultado').textContent = `🎲${dado1} 🎲${dado2}`;
-    
-    const player = renderer.players.get(currentPlayer);
-    const newPosition = (player.position + total) % (parseInt(document.getElementById('totalSquares').textContent) || 40);
-    
-    renderer.movePlayer(currentPlayer, newPosition);
-    log(`${player.name} tiró ${dado1} + ${dado2} = ${total} y se movió a la posición ${newPosition}`);
-}
-
-function pagarRenta() {
-    if (!currentPlayer || !board) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    log('Función pagar renta - En desarrollo');
-}
-
-function construirHotel() {
-    if (!currentPlayer || !board) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    log('Función construir hotel - En desarrollo');
-}
-
-function deshipotecar() {
-    if (!currentPlayer || !board) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    log('Función deshipotecar - En desarrollo');
-}
-
-function cartaSorpresa() {
-    if (!currentPlayer) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    
-    const cartas = [
-        'Avanza hasta "Salida"',
-        'Ve a la cárcel directamente',
-        'Cobra $200 por ser tu cumpleaños',
-        'Paga $50 de multa por exceso de velocidad',
-        'Avanza hasta la propiedad más cercana'
-    ];
-    
-    const cartaAleatoria = cartas[Math.floor(Math.random() * cartas.length)];
-    log(`Carta Sorpresa: ${cartaAleatoria}`);
-}
-
-function cajaComunidad() {
-    if (!currentPlayer) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    
-    const cartas = [
-        'Error bancario a tu favor. Cobra $200',
-        'Gastos médicos. Paga $50',
-        'Multa por embriaguez. Paga $20',
-        'Cobra tu herencia de $100',
-        'Impuesto de lujo. Paga $75'
-    ];
-    
-    const cartaAleatoria = cartas[Math.floor(Math.random() * cartas.length)];
-    log(`Caja de Comunidad: ${cartaAleatoria}`);
-}
-
-function pagarImpuesto() {
-    if (!currentPlayer) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    
-    const player = renderer.players.get(currentPlayer);
-    log(`${player.name} pagó impuestos de $100`);
-}
-
-function irCarcel() {
-    if (!currentPlayer || !renderer) {
-        log('No hay jugador seleccionado');
-        return;
-    }
-    
-    const player = renderer.players.get(currentPlayer);
-    const carcelPosition = 10; // Posición típica de la cárcel en Monopoly
-    
-    renderer.movePlayer(currentPlayer, carcelPosition);
-    log(`${player.name} fue enviado a la cárcel`);
-}
-
-function verRanking() {
-    // Redirigir a la página de ranking
-    window.location.href = 'ranking.html';
-}
-
-function finalizarJuego() {
-    if (confirm('¿Estás seguro de que quieres finalizar el juego?')) {
-        // Limpiar datos y redirigir al menú principal
-        localStorage.clear();
-        window.location.href = '../index.html';
-    }
-}
-
-// Responsive design
-window.addEventListener('resize', () => {
-    if (renderer) {
-        const currentTotal = parseInt(document.getElementById('totalSquares').textContent) || 40;
-        generateTestBoard(currentTotal);
-    }
-});*/

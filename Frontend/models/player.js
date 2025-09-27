@@ -24,8 +24,8 @@ class Player {
     this.propiedadesHipotecadas = [];
 
     // Cárcel
-    this.estaEnCarcel = false;
-    this.turnosCarcel = 0;
+  this.estaEnCarcel = this.estaEnCarcel ?? false;
+  this.turnosCarcel = this.turnosCarcel ?? 0;
 
     // Info país
     this.countryInfo = null;
@@ -138,6 +138,55 @@ class Player {
   /** Valida un código de país sin instanciar */
   static async validateCountryCode(code) {
     return await validateCountryCodeService(code);
+  }
+
+  // === MÉTODOS DE CÁRCEL ===
+  goToJail() {
+    this.estaEnCarcel = true;
+    this.turnosCarcel = 0;
+  }
+
+  leaveJail() {
+    this.estaEnCarcel = false;
+    this.turnosCarcel = 0;
+  }
+
+  incrementJailTurn() {
+    if (this.estaEnCarcel) this.turnosCarcel = (this.turnosCarcel || 0) + 1;
+    return this.turnosCarcel;
+  }
+
+  /**
+   * Intenta salir de la cárcel.
+   * @param {Object} opts
+   * @param {boolean} opts.pay - Forzar pago manual inmediato.
+   * @param {number} opts.cost - Coste de salida (default 50).
+   * @param {Object|null} opts.dice - Info de dados { isDouble }.
+   * @param {number} opts.maxTurns - Turnos límite para auto-pago.
+   * @returns {{freed:boolean, reason: ('pay'|'double'|'autoPay'|null)}}
+   */
+  tryLeaveJail({ pay = false, cost = 50, dice = null, maxTurns = 3 } = {}) {
+    if (!this.estaEnCarcel) return { freed: true, reason: null };
+
+    // Pago explícito
+    if (pay && (this.dinero ?? 0) >= cost) {
+      this.dinero -= cost;
+      this.leaveJail();
+      return { freed: true, reason: 'pay' };
+    }
+    // Dobles en dados
+    if (dice?.isDouble) {
+      this.leaveJail();
+      return { freed: true, reason: 'double' };
+    }
+    // Incrementar turno y evaluar auto-pago
+    const turns = this.incrementJailTurn();
+    if (turns >= maxTurns && (this.dinero ?? 0) >= cost) {
+      this.dinero -= cost;
+      this.leaveJail();
+      return { freed: true, reason: 'autoPay' };
+    }
+    return { freed: false, reason: null };
   }
 }
 
