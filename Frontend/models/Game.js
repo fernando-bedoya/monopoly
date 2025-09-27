@@ -891,13 +891,19 @@ class Game {
             
             if (propiedad.casas < 4) {
                 propiedad.casas++;
-                this.mostrarMensaje(player, '🏠 Casa Construida', 
-                    `¡Casa construida en ${square.name}! Casas: ${propiedad.casas}/4. Dinero: $${player.dinero}`);
+                let mensajeCasa = `¡Casa construida en ${square.name}! Casas: ${propiedad.casas}/4. Dinero: $${player.dinero}`;
+                
+                // Mensaje especial cuando llega a 4 casas
+                if (propiedad.casas === 4) {
+                    mensajeCasa += `\n\n🏨 ¡Tienes 4 casas en ${square.name}! Ahora puedes construir un hotel que las reemplazará y generará más renta.`;
+                }
+                
+                this.mostrarMensaje(player, '🏠 Casa Construida', mensajeCasa);
             } else {
                 propiedad.casas = 0;
                 propiedad.hotel = true;
                 this.mostrarMensaje(player, '🏨 Hotel Construido', 
-                    `¡Hotel construido en ${square.name}! Dinero: $${player.dinero}`);
+                    `¡Hotel construido en ${square.name}! Las 4 casas se han convertido en un hotel. Dinero: $${player.dinero}`);
             }
 
             // Actualizar visualmente
@@ -3278,13 +3284,13 @@ class Game {
                     ${currentPlayer.ficha} ${currentPlayer.nickname}
                 </div>
                 <div style="font-size: 16px; color: #333; margin-bottom: 15px;">
-                    Ingresa los valores de los dados (1-6):
+                    Ingresa cualquier número entero (incluso negativos):
                 </div>
             </div>
             
             <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <input type="number" id="dado1Input" min="1" max="6" value="1" style="
-                    width: 60px;
+                <input type="number" id="dado1Input" value="1" style="
+                    width: 80px;
                     height: 40px;
                     text-align: center;
                     border: 2px solid ${this.colorToCSS(currentPlayer.color)};
@@ -3293,8 +3299,8 @@ class Game {
                     font-weight: bold;
                 ">
                 <span style="font-size: 20px; font-weight: bold;">+</span>
-                <input type="number" id="dado2Input" min="1" max="6" value="1" style="
-                    width: 60px;
+                <input type="number" id="dado2Input" value="1" style="
+                    width: 80px;
                     height: 40px;
                     text-align: center;
                     border: 2px solid ${this.colorToCSS(currentPlayer.color)};
@@ -3331,12 +3337,16 @@ class Game {
         `;
         
         document.getElementById('btnConfirmarManual').addEventListener('click', () => {
-            const dado1 = parseInt(document.getElementById('dado1Input').value);
-            const dado2 = parseInt(document.getElementById('dado2Input').value);
-            if (dado1 >= 1 && dado1 <= 6 && dado2 >= 1 && dado2 <= 6) {
+            const dado1Input = document.getElementById('dado1Input').value;
+            const dado2Input = document.getElementById('dado2Input').value;
+            const dado1 = parseInt(dado1Input);
+            const dado2 = parseInt(dado2Input);
+            
+            // Verificar que sean números enteros válidos
+            if (!isNaN(dado1) && !isNaN(dado2) && Number.isInteger(dado1) && Number.isInteger(dado2)) {
                 this.procesarLanzamiento(dado1, dado2, dado1 + dado2);
             } else {
-                document.getElementById('resultadoDados').innerHTML = '<div style="color:red; font-weight:bold; margin:10px 0;">❌ Valores inválidos. Deben ser entre 1 y 6.</div>';
+                document.getElementById('resultadoDados').innerHTML = '<div style="color:red; font-weight:bold; margin:10px 0;">❌ Valores inválidos. Deben ser números enteros válidos.</div>';
             }
         });
         
