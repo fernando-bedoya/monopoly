@@ -18,6 +18,8 @@ class Game {
         this.lastDiceRoll = null;
         this.testMode = false; // Para permitir valores manuales en dados
         this.playerStatsInitialized = false; // Control para panel de estadísticas
+        this.eventListenersConfigured = false; // Control para evitar duplicación de event listeners
+        this.actionInProgress = false; // Control para evitar múltiples acciones simultáneas
         this.rules = null; // Sistema de reglas
     }
 
@@ -823,6 +825,12 @@ class Game {
      * Ofrece construcción de casas/hoteles
      */
     async ofrecerConstruccion(player, square) {
+        // Verificar si ya hay una construcción en progreso
+        if (this.actionInProgress) {
+            console.log('⚠️ Construcción ya en progreso, omitiendo...');
+            return;
+        }
+        
         const propiedad = player.propiedades.find(p => p.id === square.id);
         
         // Verificar que la propiedad no esté hipotecada
@@ -1830,8 +1838,16 @@ class Game {
      * Muestra un diálogo de confirmación
      */
     mostrarConfirmacion(titulo, mensaje, player) {
+        // Evitar múltiples modales simultáneos
+        const existingModal = document.querySelector('[data-modal-confirmacion]');
+        if (existingModal) {
+            console.log('⚠️ Modal de confirmación ya existe, omitiendo duplicado');
+            return Promise.resolve(false);
+        }
+        
         return new Promise((resolve) => {
             const modal = document.createElement('div');
+            modal.setAttribute('data-modal-confirmacion', 'true');
             modal.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -2011,6 +2027,12 @@ class Game {
      * Configura todos los eventos de botones del menú lateral
      */
     configurarEventosBotones() {
+        // Evitar duplicación de event listeners
+        if (this.eventListenersConfigured) {
+            console.log('⚠️ Event listeners ya configurados, omitiendo duplicación...');
+            return;
+        }
+
         console.log('🔧 Configurando eventos de botones del menú lateral...');
         console.log(`   • Jugadores cargados: ${this.players.length}`);
         console.log(`   • Juego iniciado: ${this.gameStarted}`);
@@ -2204,6 +2226,9 @@ class Game {
 
         console.log('✅ Eventos de botones configurados correctamente');
         console.log(`🎮 Estado final - Jugadores: ${this.players.length}, Iniciado: ${this.gameStarted}`);
+        
+        // Marcar que los event listeners ya han sido configurados
+        this.eventListenersConfigured = true;
         
         // Actualizar estado inicial de los botones
         this.actualizarEstadoBotones();
@@ -2579,35 +2604,44 @@ class Game {
      * Ejecuta la construcción de una casa
      */
     ejecutarAccionConstruirCasa() {
-        const currentPlayer = this.players[this.currentPlayerIndex];
-        if (!currentPlayer) {
-            this.notifyError('Sin jugador activo', 'No puedes construir sin un jugador en turno.');
+        // Evitar múltiples ejecuciones simultáneas
+        if (this.actionInProgress) {
+            console.log('⚠️ Acción ya en progreso, ignorando click duplicado');
             return;
         }
-        if (currentPlayer.estaEnCarcel) {
-            this.notifyWarn('Acción bloqueada', 'No puedes construir en la cárcel.');
-            return;
-        }
-        const position = currentPlayer.position || 0;
-        const square = this.board.getSquareByPosition ? this.board.getSquareByPosition(position) : this.board.squares[position];
-        const propiedad = currentPlayer.propiedades?.find(p => p.id === square.id);
-        if (!square || !propiedad) {
-            this.notifyWarn('No es tu propiedad', 'Solo puedes construir en una propiedad tuya.');
-            return;
-        }
-        if (propiedad.hipotecada) {
-            this.notifyWarn('Hipotecada', 'No puedes construir sobre una propiedad hipotecada.');
-            return;
-        }
-        if (propiedad.hotel) {
-            this.notifyInfo('Hotel existente', 'Ya hay un hotel, no puedes añadir casas.');
-            return;
-        }
-        if (propiedad.casas >= 4) {
-            this.notifyInfo('Límite alcanzado', 'Ya tienes 4 casas. Construye un hotel.');
-            return;
-        }
-        // Validar monopolio
+        
+        this.actionInProgress = true;
+        
+        try {
+            const currentPlayer = this.players[this.currentPlayerIndex];
+            if (!currentPlayer) {
+                this.notifyError('Sin jugador activo', 'No puedes construir sin un jugador en turno.');
+                return;
+            }
+            if (currentPlayer.estaEnCarcel) {
+                this.notifyWarn('Acción bloqueada', 'No puedes construir en la cárcel.');
+                return;
+            }
+            const position = currentPlayer.position || 0;
+            const square = this.board.getSquareByPosition ? this.board.getSquareByPosition(position) : this.board.squares[position];
+            const propiedad = currentPlayer.propiedades?.find(p => p.id === square.id);
+            if (!square || !propiedad) {
+                this.notifyWarn('No es tu propiedad', 'Solo puedes construir en una propiedad tuya.');
+                return;
+            }
+            if (propiedad.hipotecada) {
+                this.notifyWarn('Hipotecada', 'No puedes construir sobre una propiedad hipotecada.');
+                return;
+            }
+            if (propiedad.hotel) {
+                this.notifyInfo('Hotel existente', 'Ya hay un hotel, no puedes añadir casas.');
+                return;
+            }
+            if (propiedad.casas >= 4) {
+                this.notifyInfo('Límite alcanzado', 'Ya tienes 4 casas. Construye un hotel.');
+                return;
+            }
+            // Validar monopolio
         if (square.color) {
             const propiedadesColorJugador = currentPlayer.propiedades.filter(p => p.color === square.color);
             const totalColorTablero = (this.board.propertiesByColor?.get(square.color) || []).length;
@@ -2624,6 +2658,10 @@ class Game {
             }
         }
         this.ofrecerConstruccion(currentPlayer, square);
+        } finally {
+            // Liberar el lock de acción
+            this.actionInProgress = false;
+        }
     }
 
     /**
