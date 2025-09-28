@@ -1458,4 +1458,73 @@ button:focus {
       min-height: 20px;
     }
   }
+
+/* ===== MEJORAS ADICIONALES PARA RESPONSIVE ===== */
+
+/* Asegurar que el viewport esté bien configurado */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Scroll suave global */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  scroll-behavior: smooth;
+}
+
+/* Mejor manejo de imágenes responsivas */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Optimización de rendimiento para animaciones en móvil */
+@media screen and (max-width: 896px) {
+  * {
+    transform: translateZ(0); /* Habilitar aceleración por hardware */
+  }
+  
+  .moving, .pulse, .player-token {
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+}
+
+/* Mejoras para el contenido principal en desktop */
+@media screen and (min-width: 1200px) {
+  .main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .board-and-actions {
+    gap: 30px;
+  }
+  
+  .sidebar-monopoly {
+    width: 350px;
+  }
+}
+
+/* Tablet portrait ajustes */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .main-container {
+    padding: 15px;
+  }
+  
+  .board-and-actions {
+    flex-direction: column;
+  }
+  
+  .sidebar-monopoly {
+    width: 100%;
+    max-height: none;
+    position: static;
+  }
+}
   

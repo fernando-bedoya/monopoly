@@ -13,7 +13,8 @@
             try {
                 console.log('🔄 Cargando ranking desde el API...');
                 
-                const response = await fetch('http://127.0.0.1:5000/ranking', {
+                const { API_BASE } = await import('../utils/config.mjs');
+                const response = await fetch(`${API_BASE}/ranking`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

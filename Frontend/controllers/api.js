@@ -1,5 +1,6 @@
 // controllers/api.js
-export const API_URL = "http://127.0.0.1:5000";
+import { API_BASE } from "../utils/config.mjs";
+export const API_URL = API_BASE;
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {

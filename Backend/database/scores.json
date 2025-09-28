@@ -12,11 +12,59 @@
         "country_code": "co"
     },
     "Jugador2": {
-        "score": 4700,
+        "score": 12050,
         "country_code": "ae"
     },
     "Jugador1": {
-        "score": 3000,
+        "score": 7397,
         "country_code": "ad"
+    },
+    "MMM": {
+        "score": 1500,
+        "country_code": "ae"
+    },
+    "KKK": {
+        "score": 1400,
+        "country_code": "ad"
+    },
+    "AAAA": {
+        "score": 1500,
+        "country_code": "ad"
+    },
+    "BBB": {
+        "score": 1500,
+        "country_code": "ae"
+    },
+    "Jugador3": {
+        "score": 1500,
+        "country_code": "af"
+    },
+    "CZCZ": {
+        "score": 2159,
+        "country_code": "ae"
+    },
+    "WEWE": {
+        "score": 1188,
+        "country_code": "ad"
+    },
+    "JHJH": {
+        "score": 1500,
+        "country_code": "ad"
+    },
+    "KLKL": {
+        "score": 1500,
+        "country_code": "ae"
+    },
+    "HOLA": {
+        "score": 1350,
+        "country_code": "ad"
+    },
+    "JIJI": {
+        "score": 1600,
+        "country_code": "ad"
+    },
+    "JOJO": {
+        "score": 1500,
+        "country_code": "ae"
     }
 }

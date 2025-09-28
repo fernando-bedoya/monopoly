@@ -2,6 +2,7 @@
  * Modelo de Casilla del Tablero de Monopoly
  */
 import Square from './Square.js';
+import { API_BASE } from '../utils/config.mjs';
 /**
  * Modelo del Tablero de Monopoly
  */
@@ -21,7 +22,7 @@ class Board {
      */
     async initialize() {
         try {
-            const response = await fetch('http://127.0.0.1:5000/board');
+            const response = await fetch(`${API_BASE}/board`);
             const boardData = await response.json();
             
             this.loadSquares(boardData);   // 🔹 Carga instancias de Square
@@ -47,9 +48,11 @@ class Board {
 
         console.log('📦 Cargando casillas del backend...');
         
-        // Cargar cartas del backend si están disponibles, sino usar fallback
-        this.chanceCards = boardData.chance || this.getFallbackChanceCards();
-        this.communityCards = boardData.community_chest || this.getFallbackCommunityCards();
+    // Cargar cartas del backend si están disponibles, sino fallback
+    const rawChance = Array.isArray(boardData.chance) ? boardData.chance : null;
+    const rawCommunity = Array.isArray(boardData.community_chest) ? boardData.community_chest : null;
+    this.chanceCards = rawChance && rawChance.length ? rawChance : this.getFallbackChanceCards();
+    this.communityCards = rawCommunity && rawCommunity.length ? rawCommunity : this.getFallbackCommunityCards();
         
         console.log(`🃏 Cartas de Suerte cargadas: ${this.chanceCards.length}`);
         console.log(`📦 Cartas de Caja de Comunidad cargadas: ${this.communityCards.length}`);
@@ -138,7 +141,7 @@ class Board {
                 { "id": 27, "name": "Avenida Ventnor", "type": "property", "color": "yellow", "price": 260, "mortgage": 130, "rent": { "base": 22, "withHouse": [110, 330, 800, 975], "withHotel": 1150 } },
                 { "id": 28, "name": "Impuesto Agua", "type": "tax", "action": { "money": -50 } },
                 { "id": 29, "name": "Jardines Marvin", "type": "property", "color": "yellow", "price": 280, "mortgage": 140, "rent": { "base": 24, "withHouse": [120, 360, 850, 1025], "withHotel": 1200 } },
-                { "id": 30, "name": "Ve a la Cárcel", "type": "special", "action": { "goTo": "jail" } }
+                { "id": 30, "name": "Ve a la Cárcel", "type": "go_to_jail", "action": { "goTo": "jail" } }
             ],
             "right": [
                 { "id": 31, "name": "Avenida Pacífico", "type": "property", "color": "green", "price": 300, "mortgage": 150, "rent": { "base": 26, "withHouse": [130, 390, 900, 1100], "withHotel": 1275 } },
